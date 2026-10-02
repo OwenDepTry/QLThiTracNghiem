@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 📚 Quản lý thi trắc nghiệm
 
 > Đồ án môn **Lập trình hướng đối tượng – Java**
@@ -302,3 +303,6 @@ Trong repository có thể tham khảo thêm:
   <br>
   Phan Tiến Đạt · Nguyễn Hải Đăng · Nguyễn Khánh Duy
 </p>
+=======
+# QLThiTracNghiem
+>>>>>>> d8bd99a47d1bef95ecefc73a2a6c6d3286047c73
