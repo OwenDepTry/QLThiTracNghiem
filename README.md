@@ -1,7 +1,5 @@
-<<<<<<< HEAD
 # 📚 Quản lý thi trắc nghiệm
 
-> Đồ án môn **Lập trình hướng đối tượng – Java**
 
 Một chương trình quản lý và thi trắc nghiệm chạy trên Console.
 Đồ án được xây dựng để áp dụng các kiến thức OOP đã học vào một bài toán tương đối thực tế: quản lý người dùng, môn học, câu hỏi, đề thi và kết quả.
@@ -304,5 +302,3 @@ Trong repository có thể tham khảo thêm:
   Phan Tiến Đạt · Nguyễn Hải Đăng · Nguyễn Khánh Duy
 </p>
 =======
-# QLThiTracNghiem
->>>>>>> d8bd99a47d1bef95ecefc73a2a6c6d3286047c73
