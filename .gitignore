@@ -1,0 +1,13 @@
+# File biên dịch, sinh ra khi chạy javac
+bin/
+*.class
+
+# Dữ liệu sinh ra khi chạy chương trình
+data/*.txt
+
+# Cấu hình riêng của VS Code
+.vscode/
+
+# File rác của hệ điều hành
+Thumbs.db
+.DS_Store
