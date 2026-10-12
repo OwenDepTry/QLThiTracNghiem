@@ -1,0 +1,15 @@
+MOT|CH001|Từ khóa nào dùng để kế thừa một lớp trong Java?|MH001|1|B|implements|extends|inherits|super
+MOT|CH002|Phạm vi truy cập nào chỉ cho phép truy cập bên trong chính lớp đó?|MH001|1|C|public|protected|private|default
+MOT|CH003|Lớp nào là lớp cha của mọi lớp trong Java?|MH001|2|A|Object|Class|System|Main
+NHIEU|CH004|Những phát biểu nào đúng về lớp trừu tượng (abstract class)?|MH001|2|AC|Có thể chứa phương thức trừu tượng|Có thể tạo đối tượng trực tiếp bằng new|Có thể có constructor|Phải khai báo bằng từ khóa interface
+NHIEU|CH005|Những kỹ thuật nào thể hiện tính đa hình trong Java?|MH001|3|AB|Ghi đè phương thức (override)|Nạp chồng phương thức (overload)|Khai báo biến static|Khai báo hằng final
+DUNGSAI|CH006|Một lớp trong Java có thể implement nhiều interface cùng lúc.|MH001|1|D
+DUNGSAI|CH007|Phương thức static có thể truy cập trực tiếp thuộc tính không static của lớp.|MH001|2|S
+MOT|CH008|Câu lệnh SQL nào dùng để truy vấn dữ liệu?|MH002|1|C|INSERT|UPDATE|SELECT|DELETE
+MOT|CH009|Khóa chính (primary key) có đặc điểm nào?|MH002|2|B|Cho phép giá trị trùng lặp|Duy nhất và không được rỗng|Luôn là kiểu số|Chỉ xuất hiện trong bảng con
+NHIEU|CH010|Những lệnh nào thuộc nhóm thao tác dữ liệu (DML)?|MH002|2|AC|INSERT|CREATE|UPDATE|DROP
+DUNGSAI|CH011|Một bảng có thể có nhiều khóa ngoại.|MH002|1|D
+MOT|CH012|Dạng chuẩn 1 (1NF) yêu cầu điều gì?|MH002|3|A|Mọi thuộc tính đều là nguyên tố|Không có phụ thuộc bắc cầu|Không có phụ thuộc bộ phận|Cơ sở dữ liệu có ít nhất hai bảng
+MOT|CH013|Giao thức HTTP mặc định dùng cổng nào?|MH003|1|C|21|25|80|443
+NHIEU|CH014|Những giao thức nào hoạt động ở tầng giao vận (Transport)?|MH003|2|AC|TCP|IP|UDP|HTTP
+DUNGSAI|CH015|Địa chỉ IPv4 có độ dài 32 bit.|MH003|1|D

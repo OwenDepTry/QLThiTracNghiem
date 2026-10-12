@@ -1,0 +1,7 @@
+THISINH|TS001|Nguyễn Văn An|12/03/2005|an.nguyen@sv.edu.vn|CNTT01
+THISINH|TS002|Trần Thị Bình|25/07/2005|binh.tran@sv.edu.vn|CNTT01
+THISINH|TS003|Lê Hoàng Cường|08/11/2004|cuong.le@sv.edu.vn|CNTT02
+THISINH|TS004|Phạm Thu Dung|19/01/2005|dung.pham@sv.edu.vn|CNTT02
+THISINH|TS005|Võ Minh Em|30/05/2004|em.vo@sv.edu.vn|KTPM01
+GIAOVIEN|GV001|Đặng Quốc Huy|02/09/1985|huy.dang@gv.edu.vn|Lập trình Java
+GIAOVIEN|GV002|Bùi Thị Lan|14/04/1988|lan.bui@gv.edu.vn|Cơ sở dữ liệu
