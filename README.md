@@ -3662,3 +3662,29 @@ Override: lớp con viết lại phương thức cùng chữ ký của lớp cha
 
 **15. Tính đóng gói thể hiện ở đâu? Vì sao getter danh sách trả về bản sao?**
 Thuộc tính khai báo `private`/`protected`, truy cập qua getter/setter. `DeThi.getDanhSachMaCauHoi()` trả về bản sao và `DanhSach.getTatCa()` trả về danh sách chỉ đọc, để bên ngoài không sửa trực tiếp làm lệch dữ liệu với file; mọi thay đổi phải qua `them/sua/xoa` (có ghi file).
+
+Chạy code bằng lệnh sau:
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding  = [System.Text.Encoding]::UTF8
+java "-Dfile.encoding=UTF-8" -cp out tracnghiem.Main
+
+Các bước commit code lên github:
+Bước 1: Khai báo tên và email. Chỉ cần làm một lần trên máy:
+git config --global user.name "Tên của bạn"
+git config --global user.email "email-github-của-bạn@example.com"
+
+Bước 2: Commit lần đầu
+git init
+git add .
+git status
+
+Bước 3: 
+git commit -m "Chú thích của commit"
+git branch -M main
+git remote add origin https://github.com/OwenDepTry/QLThiTracNghiem
+git push -u origin main
+
+Những lần sau khi sửa code chỉ cần chạy:
+git add .
+git commit -m "Mô tả ngắn điều đã sửa"
+git push
