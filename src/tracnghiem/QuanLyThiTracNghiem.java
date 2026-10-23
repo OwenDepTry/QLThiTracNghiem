@@ -20,6 +20,7 @@ public class QuanLyThiTracNghiem {
     private DanhSachDeThi dsDeThi;
     private DanhSachKetQua dsKetQua;
     private BuoiThi buoiThi;
+    private ThongKe thongKe;
 
     public QuanLyThiTracNghiem() {
         this(DanhSach.THU_MUC_MAC_DINH);
@@ -32,6 +33,7 @@ public class QuanLyThiTracNghiem {
         dsDeThi = new DanhSachDeThi(thuMucDuLieu + "/" + DanhSachDeThi.TEN_FILE);
         dsKetQua = new DanhSachKetQua(thuMucDuLieu + "/" + DanhSachKetQua.TEN_FILE);
         buoiThi = new BuoiThi(dsNguoiDung, dsDeThi, dsCauHoi, dsKetQua);
+        thongKe = new ThongKe(dsMonHoc, dsNguoiDung, dsCauHoi, dsDeThi, dsKetQua);
         taiDuLieu(); // TỰ ĐỘNG ĐỌC FILE KHI KHỞI ĐỘNG
     }
 
@@ -69,9 +71,10 @@ public class QuanLyThiTracNghiem {
             System.out.println("4. Quản lý đề thi");
             System.out.println("5. Quản lý kết quả thi");
             System.out.println("6. Làm bài thi");
-            System.out.println("7. Đọc/ghi file dữ liệu");
+            System.out.println("7. Thống kê - báo cáo");
+            System.out.println("8. Đọc/ghi file dữ liệu");
             System.out.println("0. Thoát");
-            int chon = NhapLieu.nhapSoNguyen("Chọn chức năng", 0, 7);
+            int chon = NhapLieu.nhapSoNguyen("Chọn chức năng", 0, 8);
             if (chon == 0) {
                 System.out.println("Dữ liệu đã được lưu sau mỗi thao tác. Tạm biệt!");
                 return;
@@ -84,7 +87,8 @@ public class QuanLyThiTracNghiem {
                     case 4 -> menuDeThi();
                     case 5 -> menuKetQua();
                     case 6 -> buoiThi.toChucThi();
-                    case 7 -> menuFile();
+                    case 7 -> thongKe.menu();
+                    case 8 -> menuFile();
                     default -> System.out.println("Chức năng không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -731,7 +735,7 @@ public class QuanLyThiTracNghiem {
         }
     }
 
-    // ======================= 7. ĐỌC / GHI FILE =======================
+    // ======================= 8. ĐỌC / GHI FILE =======================
 
     private void menuFile() {
         while (true) {

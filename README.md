@@ -1,7 +1,9 @@
 # ĐỒ ÁN: ỨNG DỤNG QUẢN LÝ THI TRẮC NGHIỆM (Java 17, console)
 
 > Đã biên dịch bằng `javac --release 17` và chạy thử toàn bộ kịch bản demo, kể cả các trường hợp nhập sai, file dữ liệu lỗi và thư mục `data/` chưa tồn tại.
-> Tổng cộng **21 lớp** (không tính 3 interface và `Main`), khoảng 3.300 dòng mã.
+> Tổng cộng **23 lớp** (không tính 3 interface và `Main`), khoảng 3.983 dòng mã.
+>
+> **Bổ sung:** chức năng **Thống kê - báo cáo** (menu 7, lớp `ThongKe` + `ThongKeDiem`) và bộ dữ liệu mẫu **≥ 50 bản ghi cho mỗi file** (50 môn học, 60 người dùng = 50 thí sinh + 10 giáo viên, 80 câu hỏi, 50 đề thi, 150 kết quả thi).
 
 ## 1. Cây thư mục project
 
@@ -32,22 +34,25 @@ QuanLyThiTracNghiem/
 │       ├── DanhSachDeThi.java        (18)
 │       ├── DanhSachKetQua.java       (19)
 │       ├── BuoiThi.java              (20)
-│       ├── QuanLyThiTracNghiem.java  (21)
+│       ├── ThongKeDiem.java          (21) bộ cộng dồn số liệu điểm
+│       ├── ThongKe.java              (22) thống kê - báo cáo
+│       ├── QuanLyThiTracNghiem.java  (23)
 │       └── Main.java                 (không tính)
 └── data/
     ├── monhoc.txt
     ├── nguoidung.txt
     ├── cauhoi.txt
     ├── dethi.txt
-    └── ketqua.txt
+    ├── ketqua.txt
+    └── baocao_thongke.txt        (tạo ra khi chọn 7 → 10 Xuất báo cáo)
 ```
 
 ## 2. Bảng đối chiếu yêu cầu
 
 | # | Yêu cầu | Lớp / phương thức đáp ứng | Giải thích ngắn |
 |---|---|---|---|
-| 1 | ≥ 15 lớp | 21 lớp liệt kê ở mục 1 | Không tính `IQuanLy`, `IFileIO`, `IChamDiem`, `Main`. |
-| 2 | Constructor không tham số + có tham số, lớp con gọi `super(...)` | Tất cả 21 lớp, ví dụ `ThiSinh()` → `super()`, `ThiSinh(ma, hoTen, ...)` → `super(ma, hoTen, ngaySinh, email)`; `DanhSachCauHoi()` → `super(THU_MUC_MAC_DINH + "/" + TEN_FILE)`; `NhapLieu()` → `this(sc)` | Constructor không tham số đều gán giá trị mặc định hợp lệ hoặc gọi `this(...)`. |
+| 1 | ≥ 15 lớp | 23 lớp liệt kê ở mục 1 | Không tính `IQuanLy`, `IFileIO`, `IChamDiem`, `Main`. |
+| 2 | Constructor không tham số + có tham số, lớp con gọi `super(...)` | Tất cả 23 lớp, ví dụ `ThiSinh()` → `super()`, `ThiSinh(ma, hoTen, ...)` → `super(ma, hoTen, ngaySinh, email)`; `DanhSachCauHoi()` → `super(THU_MUC_MAC_DINH + "/" + TEN_FILE)`; `NhapLieu()` → `this(sc)` | Constructor không tham số đều gán giá trị mặc định hợp lệ hoặc gọi `this(...)`. |
 | 3 | ≥ 2 cây kế thừa có nghĩa nghiệp vụ | (a) `NguoiDung` → `ThiSinh`, `GiaoVien`; (b) `CauHoi` → `CauHoiCoLuaChon` → `CauHoiMotDapAn`, `CauHoiNhieuDapAn`; `CauHoi` → `CauHoiDungSai`; (c) `DanhSach<T>` → 5 lớp danh sách | 3 cây; cây câu hỏi có 3 tầng. |
 | 4 | Đa hình | `ArrayList<CauHoi>` trong `BuoiThi.lamBai()` gọi `hienThiKhiThi()`, `laTraLoiHopLe()`, `kiemTraDapAn()`, `chamDiem()`; `ArrayList<NguoiDung>` trong `DanhSachNguoiDung` gọi `hienThi()`, `toFileString()`, `getVaiTro()` | Một danh sách kiểu lớp cha chứa nhiều lớp con; Java chọn phương thức theo đối tượng thực tế lúc chạy. |
 | 5 | Lớp mảng đối tượng dùng `ArrayList` | `DanhSach<T>.danhSach` (`ArrayList<T>`) và 5 lớp con `DanhSachMonHoc`, `DanhSachNguoiDung`, `DanhSachCauHoi`, `DanhSachDeThi`, `DanhSachKetQua` | Mỗi thực thể chính có một lớp danh sách. |
@@ -56,6 +61,8 @@ QuanLyThiTracNghiem/
 | 8 | Lớp trừu tượng + phương thức trừu tượng | `NguoiDung` (`getVaiTro`, `hienThi`, `toFileString`), `CauHoi` (`kiemTraDapAn`, `hienThi`, `toFileString`, ...), `CauHoiCoLuaChon`, `DanhSach<T>` (`layMa`, `phanTichDong`, `chuyenThanhDong`, `hienThiPhanTu`, `inTieuDe`) | 4 lớp abstract. |
 | 9 | ≥ 2 interface được implement thật | `IQuanLy<T>` và `IFileIO` do `DanhSach<T>` cài đặt; `IChamDiem` do `CauHoi` cài đặt và `CauHoiNhieuDapAn` override | `BuoiThi` dùng biến `IChamDiem boChamDiem = ch;` để chấm điểm. |
 | 10 | Đủ 5 chức năng, tìm ≥ 2 tiêu chí | Menu con trong `QuanLyThiTracNghiem`: Môn học (mã, tên); Người dùng (mã, tên, vai trò, email); Câu hỏi (mã, từ khóa, môn, loại, độ khó); Đề thi (mã, tên, môn); Kết quả (mã, thí sinh, đề, khoảng điểm) | Tìm theo tên không phân biệt dấu (`NhapLieu.boDau`). |
+| 11 | **Thống kê** (bổ sung) | `ThongKe` (menu 7) dùng `ThongKeDiem` | 10 chức năng: tổng quan, phổ điểm & xếp loại, theo đề thi, theo môn học, bảng xếp hạng thí sinh (top N), theo lớp, theo tháng, ngân hàng câu hỏi (loại/độ khó/môn, câu chưa dùng), chi tiết một thí sinh, xuất toàn bộ báo cáo ra `data/baocao_thongke.txt`. |
+| 12 | **Dữ liệu ≥ 50 bản ghi** (bổ sung) | 5 file trong `data/` | 50 môn, 60 người dùng, 80 câu hỏi, 50 đề, 150 kết quả. Điểm trong `ketqua.txt` được chấm bằng chính `chamDiem()` của chương trình nên khớp với số câu đúng. |
 
 **Ràng buộc thêm:** không cho trùng mã (`nhapMaMoi`, `DanhSach.them`); xóa luôn hỏi y/n (`NhapLieu.xacNhan`); xóa môn học hoặc câu hỏi đang được đề thi dùng thì in **CẢNH BÁO** (`xoaMonHoc`, `xoaCauHoi`); không cho nhập ký tự `|` vào dữ liệu.
 
@@ -76,8 +83,9 @@ QuanLyThiTracNghiem/
         ├── ThiSinh
         └── GiaoVien
 
-Lớp độc lập: MonHoc, LuaChon, DeThi, KetQuaThi, NhapLieu, BuoiThi, QuanLyThiTracNghiem, Main
-Quan hệ chứa: QuanLyThiTracNghiem có 5 DanhSach + 1 BuoiThi; BuoiThi dùng chung 4 DanhSach;
+Lớp độc lập: MonHoc, LuaChon, DeThi, KetQuaThi, NhapLieu, BuoiThi, ThongKe, ThongKeDiem, QuanLyThiTracNghiem, Main
+Quan hệ chứa: QuanLyThiTracNghiem có 5 DanhSach + 1 BuoiThi + 1 ThongKe; BuoiThi dùng chung 4 DanhSach;
+              ThongKe dùng chung 5 DanhSach và tạo nhiều ThongKeDiem (mỗi nhóm đề/môn/lớp/tháng/thí sinh một đối tượng);
               DeThi chứa danh sách mã CauHoi; KetQuaThi tham chiếu mã ThiSinh và mã DeThi.
 ```
 
@@ -2697,7 +2705,712 @@ public class BuoiThi {
 }
 ```
 
-### 4.24. `src/tracnghiem/QuanLyThiTracNghiem.java`
+### 4.24. `src/tracnghiem/ThongKeDiem.java`
+
+```java
+package tracnghiem;
+
+/**
+ * Bộ cộng dồn số liệu điểm của MỘT nhóm kết quả thi (một đề, một môn, một thí sinh, một lớp, một tháng...).
+ * Mỗi lần gọi them(diem) sẽ cập nhật: số lượt, tổng, cao nhất, thấp nhất, số bài đạt và số bài theo xếp loại.
+ * Lớp ThongKe tạo nhiều đối tượng ThongKeDiem (mỗi nhóm một đối tượng) rồi in ra bảng.
+ */
+public class ThongKeDiem {
+
+    // THUỘC TÍNH STATIC: ngưỡng điểm đạt dùng chung
+    public static final double DIEM_DAT = 5.0;
+
+    // THUỘC TÍNH STATIC: thứ tự 4 mức xếp loại, trùng với KetQuaThi.xepLoai()
+    public static final String[] CAC_XEP_LOAI = {"Giỏi", "Khá", "Trung bình", "Yếu"};
+
+    private String tenNhom;
+    private int soLuot;
+    private double tongDiem;
+    private double tongBinhPhuong;
+    private double diemCaoNhat;
+    private double diemThapNhat;
+    private int soDat;
+    private int[] soTheoXepLoai;
+
+    public ThongKeDiem() {
+        this("");
+    }
+
+    public ThongKeDiem(String tenNhom) {
+        this.tenNhom = tenNhom;
+        this.soLuot = 0;
+        this.tongDiem = 0;
+        this.tongBinhPhuong = 0;
+        this.diemCaoNhat = 0;
+        this.diemThapNhat = 0;
+        this.soDat = 0;
+        this.soTheoXepLoai = new int[CAC_XEP_LOAI.length];
+    }
+
+    /** Cộng thêm một điểm vào nhóm. */
+    public void them(double diem) {
+        if (soLuot == 0) {
+            diemCaoNhat = diem;
+            diemThapNhat = diem;
+        } else {
+            diemCaoNhat = Math.max(diemCaoNhat, diem);
+            diemThapNhat = Math.min(diemThapNhat, diem);
+        }
+        soLuot++;
+        tongDiem += diem;
+        tongBinhPhuong += diem * diem;
+        if (diem >= DIEM_DAT) {
+            soDat++;
+        }
+        soTheoXepLoai[viTriXepLoai(KetQuaThi.xepLoai(diem))]++;
+    }
+
+    /** Cộng thêm một kết quả thi. */
+    public void them(KetQuaThi kq) {
+        them(kq.getDiem());
+    }
+
+    /** STATIC: vị trí của một xếp loại trong mảng CAC_XEP_LOAI. */
+    public static int viTriXepLoai(String xepLoai) {
+        for (int i = 0; i < CAC_XEP_LOAI.length; i++) {
+            if (CAC_XEP_LOAI[i].equals(xepLoai)) {
+                return i;
+            }
+        }
+        return CAC_XEP_LOAI.length - 1;
+    }
+
+    public String getTenNhom() {
+        return tenNhom;
+    }
+
+    public void setTenNhom(String tenNhom) {
+        this.tenNhom = tenNhom;
+    }
+
+    public int getSoLuot() {
+        return soLuot;
+    }
+
+    public double getTongDiem() {
+        return tongDiem;
+    }
+
+    public double getTrungBinh() {
+        return soLuot == 0 ? 0 : tongDiem / soLuot;
+    }
+
+    /** Độ lệch chuẩn (cho biết điểm phân tán nhiều hay ít quanh điểm trung bình). */
+    public double getDoLechChuan() {
+        if (soLuot == 0) {
+            return 0;
+        }
+        double tb = getTrungBinh();
+        double phuongSai = tongBinhPhuong / soLuot - tb * tb;
+        return Math.sqrt(Math.max(0, phuongSai));
+    }
+
+    public double getDiemCaoNhat() {
+        return diemCaoNhat;
+    }
+
+    public double getDiemThapNhat() {
+        return diemThapNhat;
+    }
+
+    public int getSoDat() {
+        return soDat;
+    }
+
+    public int getSoKhongDat() {
+        return soLuot - soDat;
+    }
+
+    /** Tỉ lệ đạt theo phần trăm (0-100). */
+    public double getTiLeDat() {
+        return soLuot == 0 ? 0 : soDat * 100.0 / soLuot;
+    }
+
+    public int getSoTheoXepLoai(String xepLoai) {
+        return soTheoXepLoai[viTriXepLoai(xepLoai)];
+    }
+
+    public boolean coDuLieu() {
+        return soLuot > 0;
+    }
+}
+```
+
+### 4.25. `src/tracnghiem/ThongKe.java`
+
+```java
+package tracnghiem;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.function.Function;
+
+/**
+ * Chức năng THỐNG KÊ - BÁO CÁO.
+ * Dùng chung 5 danh sách với chương trình quản lý (quan hệ has-a), chỉ ĐỌC dữ liệu, không sửa.
+ * Các nhóm kết quả (theo đề, môn, lớp, tháng, thí sinh) được cộng dồn bằng đối tượng ThongKeDiem.
+ * Phương thức inXxx() chỉ in, không hỏi nhập, nên có thể dùng lại để xuất báo cáo ra file.
+ */
+public class ThongKe {
+
+    public static final String TEN_FILE_BAO_CAO = "baocao_thongke.txt";
+    private static final int DO_RONG_THANH = 30;
+    private static final String KHONG_RO = "(không rõ)";
+    private static final String DINH_DANG_NHOM = "%-8s %-34s %5s %6s %6s %6s %7s %5s %5s %5s %5s%n";
+
+    private DanhSachMonHoc dsMonHoc;
+    private DanhSachNguoiDung dsNguoiDung;
+    private DanhSachCauHoi dsCauHoi;
+    private DanhSachDeThi dsDeThi;
+    private DanhSachKetQua dsKetQua;
+
+    /** Constructor không tham số: tự tạo các danh sách và đọc dữ liệu từ thư mục data/. */
+    public ThongKe() {
+        this(new DanhSachMonHoc(), new DanhSachNguoiDung(), new DanhSachCauHoi(),
+                new DanhSachDeThi(), new DanhSachKetQua());
+        dsMonHoc.docLai();
+        dsNguoiDung.docLai();
+        dsCauHoi.docLai();
+        dsDeThi.docLai();
+        dsKetQua.docLai();
+    }
+
+    /** Constructor có tham số: dùng chung các danh sách với chương trình quản lý. */
+    public ThongKe(DanhSachMonHoc dsMonHoc, DanhSachNguoiDung dsNguoiDung, DanhSachCauHoi dsCauHoi,
+                   DanhSachDeThi dsDeThi, DanhSachKetQua dsKetQua) {
+        this.dsMonHoc = dsMonHoc;
+        this.dsNguoiDung = dsNguoiDung;
+        this.dsCauHoi = dsCauHoi;
+        this.dsDeThi = dsDeThi;
+        this.dsKetQua = dsKetQua;
+    }
+
+    // ======================= MENU =======================
+
+    public void menu() {
+        while (true) {
+            System.out.println();
+            System.out.println("----- THỐNG KÊ - BÁO CÁO -----");
+            System.out.println("1. Tổng quan hệ thống");
+            System.out.println("2. Phổ điểm và xếp loại (toàn bộ kết quả)");
+            System.out.println("3. Thống kê theo đề thi");
+            System.out.println("4. Thống kê theo môn học");
+            System.out.println("5. Bảng xếp hạng thí sinh");
+            System.out.println("6. Thống kê theo lớp");
+            System.out.println("7. Thống kê theo tháng thi");
+            System.out.println("8. Thống kê ngân hàng câu hỏi");
+            System.out.println("9. Xem chi tiết một thí sinh");
+            System.out.println("10. Xuất toàn bộ báo cáo ra file");
+            System.out.println("0. Quay lại");
+            int chon = NhapLieu.nhapSoNguyen("Chọn", 0, 10);
+            switch (chon) {
+                case 0 -> {
+                    return;
+                }
+                case 1 -> inTongQuan();
+                case 2 -> inPhoDiem();
+                case 3 -> inTheoDeThi();
+                case 4 -> inTheoMonHoc();
+                case 5 -> xepHangThiSinh();
+                case 6 -> inTheoLop();
+                case 7 -> inTheoThang();
+                case 8 -> inThongKeCauHoi();
+                case 9 -> chiTietThiSinh();
+                case 10 -> xuatBaoCao(DanhSach.THU_MUC_MAC_DINH + "/" + TEN_FILE_BAO_CAO);
+                default -> System.out.println("Chức năng không hợp lệ.");
+            }
+        }
+    }
+
+    // ======================= 1. TỔNG QUAN =======================
+
+    public void inTongQuan() {
+        inTieuDeMuc("TỔNG QUAN HỆ THỐNG");
+        int soThiSinh = dsNguoiDung.layDanhSachThiSinh().size();
+        int soMonCoCauHoi = 0;
+        for (MonHoc mh : dsMonHoc.getTatCa()) {
+            if (!dsCauHoi.timTheoMonHoc(mh.getMa()).isEmpty()) {
+                soMonCoCauHoi++;
+            }
+        }
+        System.out.printf("Môn học     : %d (trong đó %d môn đã có câu hỏi)%n", dsMonHoc.soLuong(), soMonCoCauHoi);
+        System.out.printf("Người dùng  : %d (%d thí sinh, %d giáo viên)%n", dsNguoiDung.soLuong(),
+                soThiSinh, dsNguoiDung.soLuong() - soThiSinh);
+        System.out.printf("Câu hỏi     : %d (%d một đáp án, %d nhiều đáp án, %d đúng/sai)%n", dsCauHoi.soLuong(),
+                dsCauHoi.timTheoLoai(CauHoiMotDapAn.KY_HIEU_LOAI).size(),
+                dsCauHoi.timTheoLoai(CauHoiNhieuDapAn.KY_HIEU_LOAI).size(),
+                dsCauHoi.timTheoLoai(CauHoiDungSai.KY_HIEU_LOAI).size());
+        System.out.printf("Đề thi      : %d%n", dsDeThi.soLuong());
+        System.out.printf("Kết quả thi : %d lượt thi%n", dsKetQua.soLuong());
+        if (dsKetQua.soLuong() == 0) {
+            System.out.println("(Chưa có kết quả thi nào để thống kê điểm)");
+            return;
+        }
+        ThongKeDiem tk = thongKeTatCa();
+        Map<String, ThongKeDiem> theoThiSinh = nhomKetQua(KetQuaThi::getMaThiSinh);
+        Map<String, ThongKeDiem> theoDe = nhomKetQua(KetQuaThi::getMaDeThi);
+        System.out.printf("Số thí sinh đã dự thi : %d/%d%n", theoThiSinh.size(), soThiSinh);
+        System.out.printf("Điểm trung bình chung : %.2f (độ lệch chuẩn %.2f)%n", tk.getTrungBinh(), tk.getDoLechChuan());
+        System.out.printf("Điểm cao nhất / thấp nhất: %.2f / %.2f%n", tk.getDiemCaoNhat(), tk.getDiemThapNhat());
+        System.out.printf("Tỉ lệ đạt (>= %.1f)    : %.1f%% (%d/%d lượt)%n", ThongKeDiem.DIEM_DAT,
+                tk.getTiLeDat(), tk.getSoDat(), tk.getSoLuot());
+
+        ThongKeDiem deNhieuNhat = timNhom(theoDe, Comparator.comparingInt(ThongKeDiem::getSoLuot));
+        DeThi de = dsDeThi.timTheoMa(deNhieuNhat.getTenNhom());
+        System.out.printf("Đề được thi nhiều nhất : %s - %s (%d lượt)%n", deNhieuNhat.getTenNhom(),
+                de == null ? KHONG_RO : de.getTenDe(), deNhieuNhat.getSoLuot());
+        ThongKeDiem tsGioiNhat = timNhom(theoThiSinh, Comparator.comparingDouble(ThongKeDiem::getTrungBinh));
+        System.out.printf("Thí sinh có điểm TB cao nhất: %s - %s (%.2f)%n", tsGioiNhat.getTenNhom(),
+                tenThiSinh(tsGioiNhat.getTenNhom()), tsGioiNhat.getTrungBinh());
+        LocalDate dau = null;
+        LocalDate cuoi = null;
+        for (KetQuaThi kq : dsKetQua.getTatCa()) {
+            if (dau == null || kq.getNgayThi().isBefore(dau)) {
+                dau = kq.getNgayThi();
+            }
+            if (cuoi == null || kq.getNgayThi().isAfter(cuoi)) {
+                cuoi = kq.getNgayThi();
+            }
+        }
+        System.out.printf("Khoảng thời gian thi  : %s - %s%n", NhapLieu.dinhDangNgay(dau), NhapLieu.dinhDangNgay(cuoi));
+    }
+
+    // ======================= 2. PHỔ ĐIỂM =======================
+
+    public void inPhoDiem() {
+        inTieuDeMuc("PHỔ ĐIỂM VÀ XẾP LOẠI");
+        if (!kiemTraCoKetQua()) {
+            return;
+        }
+        ThongKeDiem tk = thongKeTatCa();
+        System.out.println("Xếp loại (Giỏi >= 8, Khá >= 6.5, Trung bình >= 5, Yếu < 5):");
+        for (String xl : ThongKeDiem.CAC_XEP_LOAI) {
+            inDongBieuDo(xl, tk.getSoTheoXepLoai(xl), tk.getSoLuot());
+        }
+
+        System.out.println();
+        System.out.println("Phổ điểm theo khoảng:");
+        int[] dem = new int[5];
+        String[] nhan = {"0 - <2", "2 - <4", "4 - <6", "6 - <8", "8 - 10"};
+        for (KetQuaThi kq : dsKetQua.getTatCa()) {
+            dem[Math.min(4, (int) (kq.getDiem() / 2))]++;
+        }
+        for (int i = 0; i < dem.length; i++) {
+            inDongBieuDo(nhan[i], dem[i], tk.getSoLuot());
+        }
+
+        System.out.println();
+        System.out.printf("Đạt: %d lượt (%.1f%%) | Không đạt: %d lượt (%.1f%%)%n", tk.getSoDat(), tk.getTiLeDat(),
+                tk.getSoKhongDat(), 100 - tk.getTiLeDat());
+        System.out.printf("Trung bình %.2f | Cao nhất %.2f | Thấp nhất %.2f | Độ lệch chuẩn %.2f%n",
+                tk.getTrungBinh(), tk.getDiemCaoNhat(), tk.getDiemThapNhat(), tk.getDoLechChuan());
+    }
+
+    // ======================= 3. THEO ĐỀ THI =======================
+
+    public void inTheoDeThi() {
+        inTieuDeMuc("THỐNG KÊ THEO ĐỀ THI");
+        if (!kiemTraCoKetQua()) {
+            return;
+        }
+        Map<String, ThongKeDiem> theoDe = nhomKetQua(KetQuaThi::getMaDeThi);
+        inTieuDeBangNhom("Mã đề", "Tên đề");
+        int deChuaThi = 0;
+        for (DeThi de : dsDeThi.getTatCa()) {
+            ThongKeDiem tk = theoDe.remove(de.getMa());
+            if (tk == null) {
+                deChuaThi++;
+            } else {
+                inDongNhom(de.getMa(), de.getTenDe(), tk);
+            }
+        }
+        for (ThongKeDiem tk : theoDe.values()) { // đề đã bị xóa nhưng vẫn còn kết quả
+            inDongNhom(tk.getTenNhom(), "(đề đã bị xóa)", tk);
+        }
+        System.out.println("Số đề chưa có lượt thi nào: " + deChuaThi);
+    }
+
+    // ======================= 4. THEO MÔN HỌC =======================
+
+    public void inTheoMonHoc() {
+        inTieuDeMuc("THỐNG KÊ THEO MÔN HỌC");
+        if (!kiemTraCoKetQua()) {
+            return;
+        }
+        Map<String, ThongKeDiem> theoMon = nhomKetQua(kq -> {
+            DeThi de = dsDeThi.timTheoMa(kq.getMaDeThi());
+            return de == null ? KHONG_RO : de.getMaMonHoc();
+        });
+        inTieuDeBangNhom("Mã môn", "Tên môn");
+        int monChuaThi = 0;
+        for (MonHoc mh : dsMonHoc.getTatCa()) {
+            ThongKeDiem tk = theoMon.remove(mh.getMa());
+            if (tk == null) {
+                monChuaThi++;
+            } else {
+                inDongNhom(mh.getMa(), mh.getTenMon(), tk);
+                System.out.printf("%-8s   (ngân hàng: %d câu hỏi, %d đề thi)%n", "",
+                        dsCauHoi.timTheoMonHoc(mh.getMa()).size(), dsDeThi.timTheoMonHoc(mh.getMa()).size());
+            }
+        }
+        for (ThongKeDiem tk : theoMon.values()) {
+            inDongNhom(tk.getTenNhom(), "(môn không còn tồn tại)", tk);
+        }
+        System.out.println("Số môn học chưa có lượt thi nào: " + monChuaThi + "/" + dsMonHoc.soLuong());
+    }
+
+    // ======================= 5. XẾP HẠNG THÍ SINH =======================
+
+    private void xepHangThiSinh() {
+        if (dsKetQua.soLuong() == 0) {
+            inTieuDeMuc("BẢNG XẾP HẠNG THÍ SINH");
+            kiemTraCoKetQua();
+            return;
+        }
+        int soDaThi = nhomKetQua(KetQuaThi::getMaThiSinh).size();
+        int topN = NhapLieu.nhapSoNguyen("Hiển thị bao nhiêu thí sinh đứng đầu (1-" + soDaThi + ")", 1, soDaThi);
+        inXepHangThiSinh(topN);
+    }
+
+    /** Xếp hạng theo điểm trung bình giảm dần; bằng nhau thì xét điểm cao nhất, rồi số lượt thi. */
+    public void inXepHangThiSinh(int topN) {
+        inTieuDeMuc("BẢNG XẾP HẠNG THÍ SINH (theo điểm trung bình)");
+        if (!kiemTraCoKetQua()) {
+            return;
+        }
+        List<ThongKeDiem> ds = new ArrayList<>(nhomKetQua(KetQuaThi::getMaThiSinh).values());
+        ds.sort(Comparator.comparingDouble(ThongKeDiem::getTrungBinh)
+                .thenComparingDouble(ThongKeDiem::getDiemCaoNhat)
+                .thenComparingInt(ThongKeDiem::getSoLuot)
+                .reversed());
+        String dinhDang = "%-5s %-7s %-24s %-8s %5s %6s %6s %6s  %s%n";
+        System.out.printf(dinhDang, "Hạng", "Mã", "Họ tên", "Lớp", "Lượt", "TB", "Cao", "Thấp", "Xếp loại TB");
+        System.out.println("-".repeat(90));
+        for (int i = 0; i < Math.min(topN, ds.size()); i++) {
+            ThongKeDiem tk = ds.get(i);
+            NguoiDung nd = dsNguoiDung.timTheoMa(tk.getTenNhom());
+            String lop = nd instanceof ThiSinh ? ((ThiSinh) nd).getLop() : "";
+            System.out.printf(dinhDang, i + 1, tk.getTenNhom(), NhapLieu.rutGon(tenThiSinh(tk.getTenNhom()), 24), lop,
+                    tk.getSoLuot(), dinh2(tk.getTrungBinh()), dinh2(tk.getDiemCaoNhat()), dinh2(tk.getDiemThapNhat()),
+                    KetQuaThi.xepLoai(tk.getTrungBinh()));
+        }
+        System.out.println("Hiển thị " + Math.min(topN, ds.size()) + "/" + ds.size() + " thí sinh đã dự thi.");
+
+        List<String> chuaThi = new ArrayList<>();
+        Map<String, ThongKeDiem> theoThiSinh = nhomKetQua(KetQuaThi::getMaThiSinh);
+        for (ThiSinh ts : dsNguoiDung.layDanhSachThiSinh()) {
+            if (!theoThiSinh.containsKey(ts.getMa())) {
+                chuaThi.add(ts.getMa() + " (" + ts.getHoTen() + ")");
+            }
+        }
+        System.out.println("Thí sinh chưa dự thi lần nào: " + (chuaThi.isEmpty() ? "không có" : String.join(", ", chuaThi)));
+    }
+
+    // ======================= 6. THEO LỚP =======================
+
+    public void inTheoLop() {
+        inTieuDeMuc("THỐNG KÊ THEO LỚP");
+        if (!kiemTraCoKetQua()) {
+            return;
+        }
+        Map<String, ThongKeDiem> theoLop = new TreeMap<>(nhomKetQua(kq -> {
+            NguoiDung nd = dsNguoiDung.timTheoMa(kq.getMaThiSinh());
+            return nd instanceof ThiSinh ? ((ThiSinh) nd).getLop() : KHONG_RO;
+        }));
+        Map<String, Integer> siSo = new TreeMap<>();
+        for (ThiSinh ts : dsNguoiDung.layDanhSachThiSinh()) {
+            siSo.merge(ts.getLop(), 1, Integer::sum);
+        }
+        inTieuDeBangNhom("Lớp", "Sĩ số");
+        for (ThongKeDiem tk : theoLop.values()) {
+            Integer n = siSo.get(tk.getTenNhom());
+            inDongNhom(tk.getTenNhom(), (n == null ? 0 : n) + " thí sinh", tk);
+        }
+        ThongKeDiem lopTot = timNhom(theoLop, Comparator.comparingDouble(ThongKeDiem::getTrungBinh));
+        System.out.printf("Lớp có điểm trung bình cao nhất: %s (%.2f)%n", lopTot.getTenNhom(), lopTot.getTrungBinh());
+    }
+
+    // ======================= 7. THEO THÁNG =======================
+
+    public void inTheoThang() {
+        inTieuDeMuc("THỐNG KÊ THEO THÁNG THI");
+        if (!kiemTraCoKetQua()) {
+            return;
+        }
+        DateTimeFormatter khoaThang = DateTimeFormatter.ofPattern("uuuu-MM");
+        DateTimeFormatter hienThang = DateTimeFormatter.ofPattern("MM/uuuu");
+        // TreeMap theo khóa "yyyy-MM" để tự sắp xếp tăng dần theo thời gian
+        Map<String, ThongKeDiem> theoThang = new TreeMap<>(nhomKetQua(kq -> kq.getNgayThi().format(khoaThang)));
+        int nhieuNhat = 0;
+        for (ThongKeDiem tk : theoThang.values()) {
+            nhieuNhat = Math.max(nhieuNhat, tk.getSoLuot());
+        }
+        System.out.printf("%-8s %5s %6s %7s  %s%n", "Tháng", "Lượt", "TB", "Đạt %", "Số lượt thi");
+        System.out.println("-".repeat(65));
+        for (ThongKeDiem tk : theoThang.values()) {
+            String thang = LocalDate.parse(tk.getTenNhom() + "-01").format(hienThang);
+            System.out.printf("%-8s %5d %6s %6.1f%%  %s%n", thang, tk.getSoLuot(), dinh2(tk.getTrungBinh()),
+                    tk.getTiLeDat(), thanh(tk.getSoLuot(), nhieuNhat));
+        }
+    }
+
+    // ======================= 8. NGÂN HÀNG CÂU HỎI =======================
+
+    public void inThongKeCauHoi() {
+        inTieuDeMuc("THỐNG KÊ NGÂN HÀNG CÂU HỎI");
+        int tong = dsCauHoi.soLuong();
+        if (tong == 0) {
+            System.out.println("(Chưa có câu hỏi nào)");
+            return;
+        }
+        System.out.println("Theo loại câu hỏi:");
+        inDongBieuDo("Một đáp án", dsCauHoi.timTheoLoai(CauHoiMotDapAn.KY_HIEU_LOAI).size(), tong);
+        inDongBieuDo("Nhiều đáp án", dsCauHoi.timTheoLoai(CauHoiNhieuDapAn.KY_HIEU_LOAI).size(), tong);
+        inDongBieuDo("Đúng/Sai", dsCauHoi.timTheoLoai(CauHoiDungSai.KY_HIEU_LOAI).size(), tong);
+        System.out.println("Theo độ khó:");
+        for (int doKho = 1; doKho <= 3; doKho++) {
+            inDongBieuDo(CauHoi.tenDoKho(doKho), dsCauHoi.timTheoDoKho(doKho).size(), tong);
+        }
+
+        // Số lần mỗi câu hỏi xuất hiện trong các đề thi
+        Map<String, Integer> soLanDung = new LinkedHashMap<>();
+        for (CauHoi ch : dsCauHoi.getTatCa()) {
+            soLanDung.put(ch.getMa(), dsDeThi.timDeChuaCauHoi(ch.getMa()).size());
+        }
+
+        System.out.println();
+        System.out.println("Theo môn học (chỉ liệt kê môn đã có câu hỏi):");
+        String dinhDang = "%-7s %-34s %5s %5s %6s %8s %4s %4s %4s %8s%n";
+        System.out.printf(dinhDang, "Mã môn", "Tên môn", "Tổng", "Một", "Nhiều", "Đúng/Sai", "Dễ", "TB", "Khó", "Trong đề");
+        System.out.println("-".repeat(95));
+        Map<String, List<CauHoi>> theoMon = new LinkedHashMap<>();
+        for (CauHoi ch : dsCauHoi.getTatCa()) {
+            theoMon.computeIfAbsent(ch.getMaMonHoc(), k -> new ArrayList<>()).add(ch);
+        }
+        for (Map.Entry<String, List<CauHoi>> e : theoMon.entrySet()) {
+            int[] loai = new int[3];
+            int[] doKho = new int[3];
+            int trongDe = 0;
+            for (CauHoi ch : e.getValue()) {
+                String kh = ch.getKyHieuLoai(); // ĐA HÌNH
+                loai[kh.equals(CauHoiMotDapAn.KY_HIEU_LOAI) ? 0 : kh.equals(CauHoiNhieuDapAn.KY_HIEU_LOAI) ? 1 : 2]++;
+                doKho[Math.max(1, Math.min(3, ch.getDoKho())) - 1]++;
+                if (soLanDung.get(ch.getMa()) > 0) {
+                    trongDe++;
+                }
+            }
+            MonHoc mh = dsMonHoc.timTheoMa(e.getKey());
+            System.out.printf(dinhDang, e.getKey(), NhapLieu.rutGon(mh == null ? KHONG_RO : mh.getTenMon(), 34),
+                    e.getValue().size(), loai[0], loai[1], loai[2], doKho[0], doKho[1], doKho[2],
+                    trongDe + "/" + e.getValue().size());
+        }
+
+        System.out.println();
+        List<Map.Entry<String, Integer>> sapXep = new ArrayList<>(soLanDung.entrySet());
+        sapXep.sort(Map.Entry.<String, Integer>comparingByValue().reversed());
+        System.out.println("5 câu hỏi được dùng trong nhiều đề nhất:");
+        for (int i = 0; i < Math.min(5, sapXep.size()); i++) {
+            CauHoi ch = dsCauHoi.timTheoMa(sapXep.get(i).getKey());
+            System.out.printf("  %-6s %2d đề  %s%n", ch.getMa(), sapXep.get(i).getValue(), NhapLieu.rutGon(ch.getNoiDung(), 60));
+        }
+        List<String> chuaDung = new ArrayList<>();
+        for (Map.Entry<String, Integer> e : soLanDung.entrySet()) {
+            if (e.getValue() == 0) {
+                chuaDung.add(e.getKey());
+            }
+        }
+        System.out.println("Câu hỏi chưa nằm trong đề nào (" + chuaDung.size() + "): "
+                + (chuaDung.isEmpty() ? "không có" : String.join(", ", chuaDung)));
+    }
+
+    // ======================= 9. CHI TIẾT MỘT THÍ SINH =======================
+
+    private void chiTietThiSinh() {
+        String ma = NhapLieu.nhapMa("Mã thí sinh");
+        NguoiDung nd = dsNguoiDung.timTheoMa(ma);
+        if (!(nd instanceof ThiSinh)) {
+            System.out.println(nd == null ? "Không tìm thấy thí sinh " + ma + "." : ma + " không phải thí sinh.");
+            return;
+        }
+        inChiTietThiSinh((ThiSinh) nd);
+    }
+
+    public void inChiTietThiSinh(ThiSinh ts) {
+        inTieuDeMuc("KẾT QUẢ CỦA THÍ SINH " + ts.getMa() + " - " + ts.getHoTen() + " (lớp " + ts.getLop() + ")");
+        List<KetQuaThi> ds = new ArrayList<>(dsKetQua.timTheoThiSinh(ts.getMa()));
+        if (ds.isEmpty()) {
+            System.out.println("(Thí sinh chưa dự thi lần nào)");
+            return;
+        }
+        ds.sort(Comparator.comparing(KetQuaThi::getNgayThi));
+        String dinhDang = "%-11s %-7s %-34s %6s %8s  %s%n";
+        System.out.printf(dinhDang, "Ngày thi", "Mã đề", "Tên đề", "Điểm", "Đúng", "Xếp loại");
+        System.out.println("-".repeat(85));
+        ThongKeDiem tk = new ThongKeDiem(ts.getMa());
+        for (KetQuaThi kq : ds) {
+            DeThi de = dsDeThi.timTheoMa(kq.getMaDeThi());
+            System.out.printf(dinhDang, NhapLieu.dinhDangNgay(kq.getNgayThi()), kq.getMaDeThi(),
+                    NhapLieu.rutGon(de == null ? KHONG_RO : de.getTenDe(), 34), dinh2(kq.getDiem()),
+                    kq.getSoCauDung() + "/" + kq.getTongSoCau(), KetQuaThi.xepLoai(kq.getDiem()));
+            tk.them(kq);
+        }
+        System.out.printf("Số lần thi: %d | TB: %.2f | Cao nhất: %.2f | Thấp nhất: %.2f | Đạt: %d/%d%n",
+                tk.getSoLuot(), tk.getTrungBinh(), tk.getDiemCaoNhat(), tk.getDiemThapNhat(), tk.getSoDat(), tk.getSoLuot());
+        if (ds.size() >= 2) {
+            double chenh = ds.get(ds.size() - 1).getDiem() - ds.get(0).getDiem();
+            System.out.printf("So với lần thi đầu tiên: %s%.2f điểm (%s)%n", chenh >= 0 ? "+" : "", chenh,
+                    chenh > 0 ? "tiến bộ" : chenh < 0 ? "giảm" : "không đổi");
+        }
+        // Xếp hạng của thí sinh trong toàn bộ thí sinh đã thi
+        List<ThongKeDiem> tatCa = new ArrayList<>(nhomKetQua(KetQuaThi::getMaThiSinh).values());
+        int hang = 1;
+        for (ThongKeDiem khac : tatCa) {
+            if (khac.getTrungBinh() > tk.getTrungBinh()) {
+                hang++;
+            }
+        }
+        System.out.println("Xếp hạng theo điểm trung bình: " + hang + "/" + tatCa.size());
+    }
+
+    // ======================= 10. XUẤT BÁO CÁO =======================
+
+    /** Ghi toàn bộ các bảng thống kê ra file text UTF-8 (đổi tạm System.out sang file). */
+    public boolean xuatBaoCao(String duongDan) {
+        Path p = Paths.get(duongDan);
+        PrintStream manHinh = System.out;
+        try {
+            if (p.getParent() != null) {
+                Files.createDirectories(p.getParent());
+            }
+            try (PrintStream file = new PrintStream(new FileOutputStream(p.toFile()), true, StandardCharsets.UTF_8)) {
+                System.setOut(file);
+                System.out.println("BÁO CÁO THỐNG KÊ - QUẢN LÝ THI TRẮC NGHIỆM");
+                System.out.println("Thời điểm xuất: "
+                        + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/uuuu HH:mm:ss")));
+                inTongQuan();
+                inPhoDiem();
+                inTheoDeThi();
+                inTheoMonHoc();
+                inXepHangThiSinh(Integer.MAX_VALUE);
+                inTheoLop();
+                inTheoThang();
+                inThongKeCauHoi();
+            } finally {
+                System.setOut(manHinh);
+            }
+            System.out.println("Đã xuất báo cáo thống kê ra file " + duongDan + ".");
+            return true;
+        } catch (IOException e) {
+            System.setOut(manHinh);
+            System.out.println("Lỗi ghi file báo cáo " + duongDan + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    // ======================= HỖ TRỢ =======================
+
+    /** Gom kết quả thi theo một khóa (mã đề, mã thí sinh, lớp, tháng...), giữ thứ tự xuất hiện. */
+    public Map<String, ThongKeDiem> nhomKetQua(Function<KetQuaThi, String> layKhoa) {
+        Map<String, ThongKeDiem> nhom = new LinkedHashMap<>();
+        for (KetQuaThi kq : dsKetQua.getTatCa()) {
+            String khoa = layKhoa.apply(kq);
+            nhom.computeIfAbsent(khoa, ThongKeDiem::new).them(kq);
+        }
+        return nhom;
+    }
+
+    public ThongKeDiem thongKeTatCa() {
+        ThongKeDiem tk = new ThongKeDiem("Tất cả");
+        for (KetQuaThi kq : dsKetQua.getTatCa()) {
+            tk.them(kq);
+        }
+        return tk;
+    }
+
+    /** Lấy nhóm có giá trị lớn nhất theo tiêu chí so sánh. */
+    private static ThongKeDiem timNhom(Map<String, ThongKeDiem> nhom, Comparator<ThongKeDiem> tieuChi) {
+        ThongKeDiem tot = null;
+        for (ThongKeDiem tk : nhom.values()) {
+            if (tot == null || tieuChi.compare(tk, tot) > 0) {
+                tot = tk;
+            }
+        }
+        return tot;
+    }
+
+    private String tenThiSinh(String ma) {
+        NguoiDung nd = dsNguoiDung.timTheoMa(ma);
+        return nd == null ? "(đã xóa)" : nd.getHoTen();
+    }
+
+    private boolean kiemTraCoKetQua() {
+        if (dsKetQua.soLuong() == 0) {
+            System.out.println("(Chưa có kết quả thi nào để thống kê)");
+            return false;
+        }
+        return true;
+    }
+
+    private static void inTieuDeMuc(String tieuDe) {
+        System.out.println();
+        System.out.println("=".repeat(95));
+        System.out.println("  " + tieuDe);
+        System.out.println("=".repeat(95));
+    }
+
+    private static void inTieuDeBangNhom(String cotMa, String cotTen) {
+        System.out.printf(DINH_DANG_NHOM, cotMa, cotTen, "Lượt", "TB", "Cao", "Thấp", "Đạt %", "Giỏi", "Khá", "TB", "Yếu");
+        System.out.println("-".repeat(102));
+    }
+
+    private static void inDongNhom(String ma, String ten, ThongKeDiem tk) {
+        System.out.printf(DINH_DANG_NHOM, ma, NhapLieu.rutGon(ten, 34), tk.getSoLuot(), dinh2(tk.getTrungBinh()),
+                dinh2(tk.getDiemCaoNhat()), dinh2(tk.getDiemThapNhat()), String.format("%.1f", tk.getTiLeDat()),
+                tk.getSoTheoXepLoai("Giỏi"), tk.getSoTheoXepLoai("Khá"),
+                tk.getSoTheoXepLoai("Trung bình"), tk.getSoTheoXepLoai("Yếu"));
+    }
+
+    /** In một dòng biểu đồ ngang: nhãn, số lượng, phần trăm và thanh '#'. */
+    private static void inDongBieuDo(String nhan, int soLuong, int tong) {
+        double phanTram = tong == 0 ? 0 : soLuong * 100.0 / tong;
+        System.out.printf("  %-12s %4d (%5.1f%%) %s%n", nhan, soLuong, phanTram, thanh(soLuong, tong));
+    }
+
+    /** STATIC: thanh biểu đồ dài tỉ lệ với giaTri/toiDa. */
+    public static String thanh(int giaTri, int toiDa) {
+        if (toiDa <= 0 || giaTri <= 0) {
+            return "";
+        }
+        int doDai = (int) Math.round(giaTri * (double) DO_RONG_THANH / toiDa);
+        return "#".repeat(Math.max(1, doDai));
+    }
+
+    private static String dinh2(double so) {
+        return String.format("%.2f", so);
+    }
+}
+```
+
+### 4.26. `src/tracnghiem/QuanLyThiTracNghiem.java`
 
 ```java
 package tracnghiem;
@@ -2722,6 +3435,7 @@ public class QuanLyThiTracNghiem {
     private DanhSachDeThi dsDeThi;
     private DanhSachKetQua dsKetQua;
     private BuoiThi buoiThi;
+    private ThongKe thongKe;
 
     public QuanLyThiTracNghiem() {
         this(DanhSach.THU_MUC_MAC_DINH);
@@ -2734,6 +3448,7 @@ public class QuanLyThiTracNghiem {
         dsDeThi = new DanhSachDeThi(thuMucDuLieu + "/" + DanhSachDeThi.TEN_FILE);
         dsKetQua = new DanhSachKetQua(thuMucDuLieu + "/" + DanhSachKetQua.TEN_FILE);
         buoiThi = new BuoiThi(dsNguoiDung, dsDeThi, dsCauHoi, dsKetQua);
+        thongKe = new ThongKe(dsMonHoc, dsNguoiDung, dsCauHoi, dsDeThi, dsKetQua);
         taiDuLieu(); // TỰ ĐỘNG ĐỌC FILE KHI KHỞI ĐỘNG
     }
 
@@ -2771,9 +3486,10 @@ public class QuanLyThiTracNghiem {
             System.out.println("4. Quản lý đề thi");
             System.out.println("5. Quản lý kết quả thi");
             System.out.println("6. Làm bài thi");
-            System.out.println("7. Đọc/ghi file dữ liệu");
+            System.out.println("7. Thống kê - báo cáo");
+            System.out.println("8. Đọc/ghi file dữ liệu");
             System.out.println("0. Thoát");
-            int chon = NhapLieu.nhapSoNguyen("Chọn chức năng", 0, 7);
+            int chon = NhapLieu.nhapSoNguyen("Chọn chức năng", 0, 8);
             if (chon == 0) {
                 System.out.println("Dữ liệu đã được lưu sau mỗi thao tác. Tạm biệt!");
                 return;
@@ -2786,7 +3502,8 @@ public class QuanLyThiTracNghiem {
                     case 4 -> menuDeThi();
                     case 5 -> menuKetQua();
                     case 6 -> buoiThi.toChucThi();
-                    case 7 -> menuFile();
+                    case 7 -> thongKe.menu();
+                    case 8 -> menuFile();
                     default -> System.out.println("Chức năng không hợp lệ.");
                 }
             } catch (RuntimeException e) {
@@ -3433,7 +4150,7 @@ public class QuanLyThiTracNghiem {
         }
     }
 
-    // ======================= 7. ĐỌC / GHI FILE =======================
+    // ======================= 8. ĐỌC / GHI FILE =======================
 
     private void menuFile() {
         while (true) {
@@ -3468,7 +4185,7 @@ public class QuanLyThiTracNghiem {
 }
 ```
 
-### 4.25. `src/tracnghiem/Main.java`
+### 4.27. `src/tracnghiem/Main.java`
 
 ```java
 package tracnghiem;
@@ -3494,17 +4211,30 @@ public class Main {
 
 ## 5. Dữ liệu mẫu trong `data/`
 
-3 môn học, 5 thí sinh + 2 giáo viên, 15 câu hỏi (7 MOT, 4 NHIEU, 4 DUNGSAI), 2 đề thi, 3 kết quả thi. Lưu các file ở dạng **UTF-8**.
+Mỗi file có **ít nhất 50 bản ghi**, lưu dạng **UTF-8**. Các bản ghi gốc (MH001-003, TS001-005, GV001-002, CH001-015, DT001-002, KQ001-004) được giữ nguyên.
 
-### `data/monhoc.txt`
+| File | Số bản ghi | Nội dung |
+|---|---|---|
+| `monhoc.txt` | 50 | MH001-MH050, các môn của ngành CNTT và môn đại cương |
+| `nguoidung.txt` | 60 | 50 thí sinh TS001-TS050 thuộc 6 lớp (CNTT01, CNTT02, KTPM01, KTPM02, HTTT01, ATTT01) + 10 giáo viên GV001-GV010 |
+| `cauhoi.txt` | 80 | 10 câu cho mỗi môn MH001-MH008; 43 câu một đáp án, 17 câu nhiều đáp án, 20 câu đúng/sai; 32 dễ, 33 trung bình, 15 khó |
+| `dethi.txt` | 50 | DT001-DT050: đề 15 phút, giữa kỳ, cuối kỳ, ôn tập, thi thử của 8 môn có câu hỏi |
+| `ketqua.txt` | 150 | KQ001-KQ150, thi từ 03/2026 đến 10/2026; mọi thí sinh đều có ít nhất 1 lượt thi |
+
+Kết quả KQ005-KQ150 được tạo bằng cách mô phỏng thí sinh trả lời từng câu rồi chấm bằng chính `chamDiem()` của các lớp câu hỏi (có cả trường hợp bỏ câu và chọn thiếu đáp án ở câu nhiều đáp án được điểm từng phần), nên điểm luôn khớp với số câu đúng và số câu của đề.
+
+### `data/monhoc.txt` (50 dòng, trích 5 dòng đầu)
 
 ```text
 MONHOC|MH001|Lập trình hướng đối tượng|3
 MONHOC|MH002|Cơ sở dữ liệu|3
 MONHOC|MH003|Mạng máy tính|2
+MONHOC|MH004|Cấu trúc dữ liệu và giải thuật|3
+MONHOC|MH005|Hệ điều hành|3
+...
 ```
 
-### `data/nguoidung.txt`
+### `data/nguoidung.txt` (60 dòng, trích 8 dòng đầu)
 
 ```text
 THISINH|TS001|Nguyễn Văn An|12/03/2005|an.nguyen@sv.edu.vn|CNTT01
@@ -3512,11 +4242,13 @@ THISINH|TS002|Trần Thị Bình|25/07/2005|binh.tran@sv.edu.vn|CNTT01
 THISINH|TS003|Lê Hoàng Cường|08/11/2004|cuong.le@sv.edu.vn|CNTT02
 THISINH|TS004|Phạm Thu Dung|19/01/2005|dung.pham@sv.edu.vn|CNTT02
 THISINH|TS005|Võ Minh Em|30/05/2004|em.vo@sv.edu.vn|KTPM01
-GIAOVIEN|GV001|Đặng Quốc Huy|02/09/1985|huy.dang@gv.edu.vn|Lập trình Java
-GIAOVIEN|GV002|Bùi Thị Lan|14/04/1988|lan.bui@gv.edu.vn|Cơ sở dữ liệu
+THISINH|TS006|Trương Phương Ngân|08/10/2005|ngan.truong@sv.edu.vn|ATTT01
+THISINH|TS007|Mai Hữu Bảo|25/10/2005|bao.mai@sv.edu.vn|CNTT01
+THISINH|TS008|Lâm Ngọc Ngân|10/02/2005|ngan.lam@sv.edu.vn|CNTT02
+...
 ```
 
-### `data/cauhoi.txt`
+### `data/cauhoi.txt` (80 dòng, trích 5 dòng đầu)
 
 ```text
 MOT|CH001|Từ khóa nào dùng để kế thừa một lớp trong Java?|MH001|1|B|implements|extends|inherits|super
@@ -3524,31 +4256,32 @@ MOT|CH002|Phạm vi truy cập nào chỉ cho phép truy cập bên trong chính
 MOT|CH003|Lớp nào là lớp cha của mọi lớp trong Java?|MH001|2|A|Object|Class|System|Main
 NHIEU|CH004|Những phát biểu nào đúng về lớp trừu tượng (abstract class)?|MH001|2|AC|Có thể chứa phương thức trừu tượng|Có thể tạo đối tượng trực tiếp bằng new|Có thể có constructor|Phải khai báo bằng từ khóa interface
 NHIEU|CH005|Những kỹ thuật nào thể hiện tính đa hình trong Java?|MH001|3|AB|Ghi đè phương thức (override)|Nạp chồng phương thức (overload)|Khai báo biến static|Khai báo hằng final
-DUNGSAI|CH006|Một lớp trong Java có thể implement nhiều interface cùng lúc.|MH001|1|D
-DUNGSAI|CH007|Phương thức static có thể truy cập trực tiếp thuộc tính không static của lớp.|MH001|2|S
-MOT|CH008|Câu lệnh SQL nào dùng để truy vấn dữ liệu?|MH002|1|C|INSERT|UPDATE|SELECT|DELETE
-MOT|CH009|Khóa chính (primary key) có đặc điểm nào?|MH002|2|B|Cho phép giá trị trùng lặp|Duy nhất và không được rỗng|Luôn là kiểu số|Chỉ xuất hiện trong bảng con
-NHIEU|CH010|Những lệnh nào thuộc nhóm thao tác dữ liệu (DML)?|MH002|2|AC|INSERT|CREATE|UPDATE|DROP
-DUNGSAI|CH011|Một bảng có thể có nhiều khóa ngoại.|MH002|1|D
-MOT|CH012|Dạng chuẩn 1 (1NF) yêu cầu điều gì?|MH002|3|A|Mọi thuộc tính đều là nguyên tố|Không có phụ thuộc bắc cầu|Không có phụ thuộc bộ phận|Cơ sở dữ liệu có ít nhất hai bảng
-MOT|CH013|Giao thức HTTP mặc định dùng cổng nào?|MH003|1|C|21|25|80|443
-NHIEU|CH014|Những giao thức nào hoạt động ở tầng giao vận (Transport)?|MH003|2|AC|TCP|IP|UDP|HTTP
-DUNGSAI|CH015|Địa chỉ IPv4 có độ dài 32 bit.|MH003|1|D
+...
 ```
 
-### `data/dethi.txt`
+### `data/dethi.txt` (50 dòng, trích 5 dòng đầu)
 
 ```text
 DETHI|DT001|Kiểm tra giữa kỳ Lập trình OOP|MH001|15|CH001,CH002,CH003,CH004,CH005,CH006,CH007
 DETHI|DT002|Kiểm tra nhanh Cơ sở dữ liệu|MH002|10|CH008,CH009,CH010,CH011,CH012
+DETHI|DT003|15 phút Lập trình OOP - Đề 1|MH001|15|CH002,CH003,CH005,CH007,CH017,CH018
+DETHI|DT004|15 phút Cơ sở dữ liệu - Đề 1|MH002|15|CH008,CH009,CH010,CH011,CH020,CH021
+DETHI|DT005|15 phút Mạng máy tính - Đề 1|MH003|15|CH013,CH014,CH015,CH024,CH030
+...
 ```
 
-### `data/ketqua.txt`
+### `data/ketqua.txt` (150 dòng, trích 8 dòng đầu)
 
 ```text
 KETQUA|KQ001|TS001|DT001|8.57|6|7|20/09/2026
 KETQUA|KQ002|TS002|DT001|5.71|4|7|20/09/2026
 KETQUA|KQ003|TS003|DT002|10.0|5|5|25/09/2026
+KETQUA|KQ004|TS003|DT001|3.57|2|7|15/10/2026
+KETQUA|KQ005|TS001|DT025|7.0|7|10|28/03/2026
+KETQUA|KQ006|TS002|DT039|7.22|4|6|18/04/2026
+KETQUA|KQ007|TS003|DT030|7.5|6|8|25/09/2026
+KETQUA|KQ008|TS004|DT029|7.5|6|8|31/07/2026
+...
 ```
 
 ## 6. Lệnh biên dịch và chạy
@@ -3570,7 +4303,7 @@ java -cp out tracnghiem.Main
 
 Ghi chú:
 - `chcp 65001` chuyển console Windows sang UTF-8 để hiện tiếng Việt. Nếu console cũ vẫn lỗi khi gõ có dấu, nên chạy trong terminal của IntelliJ / VS Code.
-- Muốn khôi phục dữ liệu mẫu: chép lại 5 file ở mục 5 vào `data/`.
+- Muốn khôi phục dữ liệu mẫu: chép lại thư mục `data/` từ file nén của đồ án (các thao tác thêm/sửa/xóa/thi đều ghi thẳng vào file).
 - Xóa thư mục `data/` rồi chạy lại: chương trình tự tạo 5 file rỗng, không báo lỗi.
 
 ## 7. Kịch bản demo
@@ -3578,45 +4311,56 @@ Ghi chú:
 Mỗi bước ghi theo dạng *menu chính → menu con → dữ liệu nhập*. Dòng chữ nghiêng là điều cần chỉ cho giảng viên thấy.
 
 **Bước 0 – Khởi động.** Chạy chương trình.
-*Dòng đầu tiên "Đã đọc: 3 môn học, 7 người dùng, 15 câu hỏi, 2 đề thi, 3 kết quả." chứng minh tự đọc file khi khởi động.*
+*Dòng đầu tiên "Đã đọc: 50 môn học, 60 người dùng, 80 câu hỏi, 50 đề thi, 150 kết quả." chứng minh tự đọc file khi khởi động.*
 
 **Bước 1 – Xem**
-1. `1` (Môn học) → `1` (Xem) → bảng 3 môn → `0`.
-2. `2` (Người dùng) → `1` → bảng 7 người, cột Vai trò hiện "Thí sinh"/"Giáo viên".
+1. `1` (Môn học) → `1` (Xem) → bảng 50 môn → `0`.
+2. `2` (Người dùng) → `1` → bảng 60 người, cột Vai trò hiện "Thí sinh"/"Giáo viên".
    *Một danh sách `ArrayList<NguoiDung>` in ra hai kiểu khác nhau nhờ đa hình `hienThi()`.* → `0`.
-3. `3` (Câu hỏi) → `1` → 15 câu, mỗi loại in đáp án theo cách riêng → `0`.
+3. `3` (Câu hỏi) → `1` → 80 câu, mỗi loại in đáp án theo cách riêng → `0`.
 
 **Bước 2 – Thêm (kèm nhập sai)**
-1. `2` → `2` → `1` (Thí sinh) → Enter (nhận mã tự sinh **TS006**) → `Hồ Văn Mới` → nhập sai `31/02/2005` (báo lỗi) → `15/08/2005` → nhập sai `abc@` (báo lỗi) → `moi.ho@sv.edu.vn` → `CNTT03`.
-   *Mã TS006 do phương thức static `ThiSinh.sinhMa()` sinh ra.*
+1. `2` → `2` → `1` (Thí sinh) → Enter (nhận mã tự sinh **TS051**) → `Hồ Văn Mới` → nhập sai `31/02/2005` (báo lỗi) → `15/08/2005` → nhập sai `abc@` (báo lỗi) → `moi.ho@sv.edu.vn` → `CNTT03`.
+   *Mã TS051 do phương thức static `ThiSinh.sinhMa()` sinh ra.*
 2. Thử thêm lần nữa và gõ mã `TS001` → báo "mã đã tồn tại" → chứng minh không trùng mã. → `0`.
-3. `3` → `2` → `1` (Một đáp án) → Enter (**CH016**) → `Từ khóa nào dùng để khai báo hằng số trong Java?` → `MH001` → `1` → `4` → `static`, `final`, `const`, `var` → `B` → `0`.
+3. `3` → `2` → `1` (Một đáp án) → Enter (**CH081**) → `Từ khóa nào dùng để khai báo hằng số trong Java?` → `MH001` → `1` → `4` → `static`, `final`, `const`, `var` → `B` → `0`.
 
 **Bước 3 – Sửa**
-`2` → `3` → `TS006` → Enter, Enter, Enter (giữ nguyên họ tên, ngày sinh, email) → `KTPM02` → "Đã sửa ... và ghi file". → `0`.
+`2` → `3` → `TS051` → Enter, Enter, Enter (giữ nguyên họ tên, ngày sinh, email) → `KTPM02` → "Đã sửa ... và ghi file". → `0`.
 
 **Bước 4 – Xóa (kèm cảnh báo)**
-1. `1` → `4` → `MH001` → hiện **CẢNH BÁO** môn đang dùng bởi 1 đề thi và 8 câu hỏi → `n` → "Đã hủy xóa". → `0`.
-2. `3` → `4` → `CH002` → **CẢNH BÁO** câu hỏi nằm trong đề DT001 → `y` → câu hỏi bị xóa và tự gỡ khỏi DT001. → `0`.
+1. `1` → `4` → `MH001` → hiện **CẢNH BÁO** môn đang dùng bởi 7 đề thi và 11 câu hỏi → `n` → "Đã hủy xóa". → `0`.
+2. `3` → `4` → `CH002` → **CẢNH BÁO** câu hỏi nằm trong 6 đề (DT001, ...) → `y` → câu hỏi bị xóa và tự gỡ khỏi các đề đó. → `0`.
 
 **Bước 5 – Tìm kiếm**
-1. `2` → `5` → `2` (theo họ tên) → gõ `nguyen` (không dấu) → ra "Nguyễn Văn An". → `0`.
-2. `3` → `5` → `4` (theo loại) → `3` (Đúng/Sai) → ra 4 câu Đúng/Sai. → `0`.
+1. `2` → `5` → `2` (theo họ tên) → gõ `nguyen` (không dấu) → ra "Nguyễn Văn An" và giáo viên "Nguyễn Thành Trung". → `0`.
+2. `3` → `5` → `4` (theo loại) → `3` (Đúng/Sai) → ra 20 câu Đúng/Sai. → `0`.
 3. (Tùy chọn) `5` → `5` → `4` (khoảng điểm) → `8` → `10`.
 
 **Bước 6 – Làm bài thi**
-`6` → gõ `GV001` (báo "là giáo viên, không phải thí sinh") → `TS006` → `DT002` → `y` → lần lượt trả lời `C`, `B`, `A,C`, `D`, `A`.
+`6` → gõ `GV001` (báo "là giáo viên, không phải thí sinh") → `TS051` → `DT002` → `y` → lần lượt trả lời `C`, `B`, `A,C`, `D`, `A`.
 Có thể thử nhập sai (ví dụ `X` ở câu Đúng/Sai) để thấy báo lỗi, hoặc chỉ chọn `A` ở câu nhiều đáp án để thấy **điểm từng phần**.
-*Bảng kết quả in Loại / Trả lời / Đáp án / Điểm từng câu; điểm 10.00 và "Đã lưu kết quả KQ004".*
+*Bảng kết quả in Loại / Trả lời / Đáp án / Điểm từng câu; điểm 10.00 và "Đã lưu kết quả KQ151".*
 
 **Bước 7 – Đọc/ghi file**
-1. `5` → `1` → thấy dòng **KQ004** vừa thi. → `0`.
-2. Mở `data/ketqua.txt` bằng Notepad → thấy dòng `KETQUA|KQ004|TS006|DT002|10.0|5|5|...` (đã ghi ngay sau khi thi).
-3. Sửa tay một điểm trong file, lưu lại (UTF-8). Về chương trình: `7` → `3` (Đọc lại toàn bộ) → `5` → `1` → thấy điểm đã đổi.
+1. `5` → `1` → thấy dòng **KQ151** vừa thi ở cuối bảng. → `0`.
+2. Mở `data/ketqua.txt` bằng Notepad → thấy dòng `KETQUA|KQ151|TS051|DT002|10.0|5|5|...` (đã ghi ngay sau khi thi).
+3. Sửa tay một điểm trong file, lưu lại (UTF-8). Về chương trình: `8` → `3` (Đọc lại toàn bộ) → `5` → `1` → thấy điểm đã đổi.
 4. Thêm một dòng rác (ví dụ `ABC`) vào file rồi đọc lại → chương trình in "Cảnh báo: bỏ qua dòng ..." và vẫn chạy bình thường.
-5. `7` → `1` xem đường dẫn và số bản ghi của 5 file; `0` → `0` thoát.
+5. `8` → `1` xem đường dẫn và số bản ghi của 5 file; `0`.
 
-## 8. 15 câu hỏi vấn đáp thường gặp
+**Bước 8 – Thống kê (chức năng bổ sung)**
+1. `7` → `1` (Tổng quan): số lượng từng loại dữ liệu, điểm TB chung, tỉ lệ đạt, đề được thi nhiều nhất, thí sinh giỏi nhất.
+2. `2` (Phổ điểm): biểu đồ ngang bằng ký tự `#` cho 4 mức xếp loại và 5 khoảng điểm.
+3. `3` (Theo đề thi) và `4` (Theo môn học): mỗi dòng có số lượt, TB, cao nhất, thấp nhất, % đạt, số bài Giỏi/Khá/TB/Yếu.
+   *Mỗi dòng là một đối tượng `ThongKeDiem`; `ThongKe.nhomKetQua(...)` gom kết quả theo khóa truyền vào (mã đề, mã môn, lớp, tháng...).*
+4. `5` (Xếp hạng) → `10` → top 10 thí sinh theo điểm trung bình.
+5. `6` (Theo lớp), `7` (Theo tháng), `8` (Ngân hàng câu hỏi: theo loại, độ khó, môn, 5 câu dùng nhiều nhất, câu chưa vào đề nào).
+6. `9` → `TS003` → lịch sử thi theo ngày, điểm TB, mức tiến bộ so với lần đầu, thứ hạng.
+7. `10` → "Đã xuất báo cáo thống kê ra file data/baocao_thongke.txt" → mở file bằng Notepad để xem toàn bộ báo cáo.
+8. `0` → `0` thoát.
+
+## 8. 17 câu hỏi vấn đáp thường gặp
 
 **1. Đa hình nằm ở đâu trong đồ án?**
 Rõ nhất ở `BuoiThi.lamBai()`: `ArrayList<CauHoi> cacCauHoi` chứa lẫn `CauHoiMotDapAn`, `CauHoiNhieuDapAn`, `CauHoiDungSai`. Vòng lặp gọi `ch.hienThiKhiThi()`, `ch.laTraLoiHopLe()`, `ch.kiemTraDapAn()`, `ch.chamDiem()`; Java chọn phiên bản theo đối tượng thực tế lúc chạy (dynamic binding). Tương tự `DanhSachNguoiDung` gọi `nd.hienThi()` cho cả `ThiSinh` lẫn `GiaoVien`.
@@ -3662,6 +4406,12 @@ Override: lớp con viết lại phương thức cùng chữ ký của lớp cha
 
 **15. Tính đóng gói thể hiện ở đâu? Vì sao getter danh sách trả về bản sao?**
 Thuộc tính khai báo `private`/`protected`, truy cập qua getter/setter. `DeThi.getDanhSachMaCauHoi()` trả về bản sao và `DanhSach.getTatCa()` trả về danh sách chỉ đọc, để bên ngoài không sửa trực tiếp làm lệch dữ liệu với file; mọi thay đổi phải qua `them/sua/xoa` (có ghi file).
+
+**16. Chức năng thống kê được thiết kế thế nào?**
+`ThongKe` không giữ dữ liệu riêng mà dùng chung 5 danh sách với `QuanLyThiTracNghiem` (truyền qua constructor có tham số), nên vừa thi xong hay vừa sửa dữ liệu là thống kê thấy ngay. Lớp `ThongKeDiem` là bộ cộng dồn của một nhóm: mỗi lần `them(diem)` cập nhật số lượt, tổng, cao nhất, thấp nhất, số bài đạt và số bài theo xếp loại; điểm trung bình, tỉ lệ đạt, độ lệch chuẩn được tính từ các giá trị đó. `nhomKetQua(Function<KetQuaThi, String> layKhoa)` gom kết quả vào `LinkedHashMap<String, ThongKeDiem>` theo khóa bất kỳ, nhờ vậy một hàm dùng được cho thống kê theo đề, môn, thí sinh, lớp và tháng.
+
+**17. Xuất báo cáo ra file làm thế nào mà không viết lại code in?**
+Các hàm `inXxx()` chỉ in, không hỏi nhập. `xuatBaoCao()` tạm đổi `System.out` sang một `PrintStream` ghi file UTF-8, gọi lần lượt các hàm in, rồi trả `System.out` về màn hình trong khối `finally` (kể cả khi có lỗi). Nhờ vậy nội dung file giống hệt những gì thấy trên màn hình.
 
 Chạy Code bằng lệnh sau:
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

@@ -3,5 +3,58 @@ THISINH|TS002|Trần Thị Bình|25/07/2005|binh.tran@sv.edu.vn|CNTT01
 THISINH|TS003|Lê Hoàng Cường|08/11/2004|cuong.le@sv.edu.vn|CNTT02
 THISINH|TS004|Phạm Thu Dung|19/01/2005|dung.pham@sv.edu.vn|CNTT02
 THISINH|TS005|Võ Minh Em|30/05/2004|em.vo@sv.edu.vn|KTPM01
+THISINH|TS006|Trương Phương Ngân|08/10/2005|ngan.truong@sv.edu.vn|ATTT01
+THISINH|TS007|Mai Hữu Bảo|25/10/2005|bao.mai@sv.edu.vn|CNTT01
+THISINH|TS008|Lâm Ngọc Ngân|10/02/2005|ngan.lam@sv.edu.vn|CNTT02
+THISINH|TS009|Lý Thanh Quyên|13/05/2004|quyen.ly@sv.edu.vn|KTPM01
+THISINH|TS010|Đỗ Gia Đạt|21/02/2005|dat.do@sv.edu.vn|KTPM02
+THISINH|TS011|Đinh Phương Vy|10/08/2004|vy.dinh@sv.edu.vn|HTTT01
+THISINH|TS012|Mai Đức Khang|28/12/2004|khang.mai@sv.edu.vn|ATTT01
+THISINH|TS013|Ngô Ngọc Hương|19/09/2005|huong.ngo@sv.edu.vn|CNTT01
+THISINH|TS014|Ngô Hữu Tài|16/07/2005|tai.ngo@sv.edu.vn|CNTT02
+THISINH|TS015|Ngô Hồng Thảo|17/09/2006|thao.ngo@sv.edu.vn|KTPM01
+THISINH|TS016|Vũ Thu Linh|23/09/2005|linh.vu@sv.edu.vn|KTPM02
+THISINH|TS017|Lâm Bảo Thảo|05/08/2004|thao.lam@sv.edu.vn|HTTT01
+THISINH|TS018|Phạm Anh Bảo|23/09/2004|bao.pham@sv.edu.vn|ATTT01
+THISINH|TS019|Đặng Hữu Đạt|23/08/2006|dat.dang@sv.edu.vn|CNTT01
+THISINH|TS020|Ngô Hoàng Lộc|27/05/2003|loc.ngo@sv.edu.vn|CNTT02
+THISINH|TS021|Lâm Khánh Trâm|16/06/2004|tram.lam@sv.edu.vn|KTPM01
+THISINH|TS022|Lý Khánh Trâm|25/08/2006|tram.ly@sv.edu.vn|KTPM02
+THISINH|TS023|Trần Kim Yến|15/02/2005|yen.tran@sv.edu.vn|HTTT01
+THISINH|TS024|Trương Đức Vinh|06/07/2006|vinh.truong@sv.edu.vn|ATTT01
+THISINH|TS025|Lê Đức Bảo|12/02/2004|bao.le@sv.edu.vn|CNTT01
+THISINH|TS026|Ngô Quốc Vinh|01/02/2003|vinh.ngo@sv.edu.vn|CNTT02
+THISINH|TS027|Đinh Minh Tài|26/04/2004|tai.dinh@sv.edu.vn|KTPM01
+THISINH|TS028|Trần Phương Uyên|22/11/2004|uyen.tran@sv.edu.vn|KTPM02
+THISINH|TS029|Bùi Hồng Diệp|25/08/2005|diep.bui@sv.edu.vn|HTTT01
+THISINH|TS030|Hoàng Hữu Hiếu|16/10/2004|hieu.hoang@sv.edu.vn|ATTT01
+THISINH|TS031|Trương Đức Long|14/11/2004|long.truong@sv.edu.vn|CNTT01
+THISINH|TS032|Mai Đức Đạt|14/07/2006|dat.mai@sv.edu.vn|CNTT02
+THISINH|TS033|Phan Bảo Hà|04/07/2003|ha.phan@sv.edu.vn|KTPM01
+THISINH|TS034|Đỗ Thanh Hà|01/09/2005|ha.do@sv.edu.vn|KTPM02
+THISINH|TS035|Đặng Khánh Yến|04/08/2005|yen.dang@sv.edu.vn|HTTT01
+THISINH|TS036|Huỳnh Quốc Khôi|17/04/2005|khoi.huynh@sv.edu.vn|ATTT01
+THISINH|TS037|Dương Tuấn Hiếu|22/12/2003|hieu.duong@sv.edu.vn|CNTT01
+THISINH|TS038|Trần Hoàng Tuấn|02/11/2005|tuan.tran@sv.edu.vn|CNTT02
+THISINH|TS039|Trần Anh Duy|16/12/2005|duy.tran@sv.edu.vn|KTPM01
+THISINH|TS040|Hoàng Hữu Duy|26/09/2004|duy.hoang@sv.edu.vn|KTPM02
+THISINH|TS041|Huỳnh Bảo Uyên|14/09/2005|uyen.huynh@sv.edu.vn|HTTT01
+THISINH|TS042|Hồ Đức Tuấn|12/03/2004|tuan.ho@sv.edu.vn|ATTT01
+THISINH|TS043|Ngô Đức Vinh|06/06/2005|vinh.ngo2@sv.edu.vn|CNTT01
+THISINH|TS044|Phạm Hữu Đạt|26/05/2006|dat.pham@sv.edu.vn|CNTT02
+THISINH|TS045|Phan Mỹ Hà|03/08/2005|ha.phan2@sv.edu.vn|KTPM01
+THISINH|TS046|Đinh Thu Hà|12/03/2004|ha.dinh@sv.edu.vn|KTPM02
+THISINH|TS047|Mai Hữu Duy|04/10/2005|duy.mai@sv.edu.vn|HTTT01
+THISINH|TS048|Mai Mỹ Diệp|10/10/2004|diep.mai@sv.edu.vn|ATTT01
+THISINH|TS049|Hoàng Minh Kiên|04/07/2004|kien.hoang@sv.edu.vn|CNTT01
+THISINH|TS050|Trần Thanh Oanh|21/11/2003|oanh.tran@sv.edu.vn|CNTT02
 GIAOVIEN|GV001|Đặng Quốc Huy|02/09/1985|huy.dang@gv.edu.vn|Lập trình Java
 GIAOVIEN|GV002|Bùi Thị Lan|14/04/1988|lan.bui@gv.edu.vn|Cơ sở dữ liệu
+GIAOVIEN|GV003|Nguyễn Thành Trung|21/06/1982|trung.nguyen@gv.edu.vn|Mạng máy tính
+GIAOVIEN|GV004|Lê Thị Thu Hà|09/12/1987|ha.le@gv.edu.vn|Cấu trúc dữ liệu và giải thuật
+GIAOVIEN|GV005|Phạm Minh Tuấn|17/03/1980|tuan.pham@gv.edu.vn|Hệ điều hành
+GIAOVIEN|GV006|Trần Ngọc Ánh|05/08/1990|anh.tran@gv.edu.vn|Lập trình Web
+GIAOVIEN|GV007|Võ Văn Phong|28/02/1978|phong.vo@gv.edu.vn|Toán rời rạc
+GIAOVIEN|GV008|Hoàng Thị Mai|11/11/1986|mai.hoang@gv.edu.vn|Công nghệ phần mềm
+GIAOVIEN|GV009|Đỗ Hữu Nghĩa|30/07/1984|nghia.do@gv.edu.vn|Trí tuệ nhân tạo
+GIAOVIEN|GV010|Ngô Thanh Tâm|19/05/1991|tam.ngo@gv.edu.vn|An toàn thông tin
