@@ -1,7 +1,7 @@
-   out/
-   *.class
-   ~$*
-   .idea/
-   .vscode/
-   *.docx
-   *.pdf
+out/
+*.class
+~$*
+.idea/
+.vscode/
+*.docx
+*.pdf

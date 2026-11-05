@@ -48,4 +48,3 @@ MONHOC|MH047|Lịch sử Đảng Cộng sản Việt Nam|2
 MONHOC|MH048|Pháp luật đại cương|2
 MONHOC|MH049|Giáo dục thể chất|1
 MONHOC|MH050|Đồ án chuyên ngành|4
-MONHOC|MH051|0|1

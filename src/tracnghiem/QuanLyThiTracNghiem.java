@@ -2,6 +2,7 @@ package tracnghiem;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -22,6 +23,8 @@ public class QuanLyThiTracNghiem {
     private DanhSachKetQua dsKetQua;
     private BuoiThi buoiThi;
     private ThongKe thongKe;
+    /** Lỗi định dạng mã / trường bắt buộc / liên kết giữa các file, phát hiện sau khi đọc. */
+    private final List<String> loiDuLieu = new ArrayList<>();
 
     public QuanLyThiTracNghiem() {
         this(DanhSach.THU_MUC_MAC_DINH);
@@ -54,6 +57,176 @@ public class QuanLyThiTracNghiem {
         }
         System.out.printf("Đã đọc: %d môn học, %d người dùng, %d câu hỏi, %d đề thi, %d kết quả.%n",
                 soMon, soNguoi, soCau, soDe, soKetQua);
+        kiemTraDuLieu();
+        if (!loiDuLieu.isEmpty()) {
+            System.out.println("CẢNH BÁO: dữ liệu có " + loiDuLieu.size()
+                    + " lỗi, chương trình chỉ cho xem/tìm kiếm cho tới khi sửa xong:");
+            inLoiDuLieu(15);
+            System.out.println("Sửa các file trong data/ rồi chọn 8 -> 3 để đọc lại (8 -> 1 để xem lại danh sách lỗi).");
+        }
+    }
+
+    // ======================= KIỂM TRA DỮ LIỆU SAU KHI ĐỌC =======================
+
+    /**
+     * Kiểm tra những gì từng file riêng lẻ không tự kiểm tra được:
+     * định dạng mã, trường bắt buộc, và liên kết giữa các file
+     * (câu hỏi -> môn, đề -> môn/câu hỏi, kết quả -> thí sinh/đề, điểm khớp số câu đúng).
+     */
+    private void kiemTraDuLieu() {
+        loiDuLieu.clear();
+        if (dsMonHoc.coLoiDoc() || dsNguoiDung.coLoiDoc() || dsCauHoi.coLoiDoc()
+                || dsDeThi.coLoiDoc() || dsKetQua.coLoiDoc()) {
+            return; // đã có file đọc lỗi nên dữ liệu chưa đủ để kiểm tra liên kết
+        }
+        for (MonHoc mh : dsMonHoc.getTatCa()) {
+            kiemTraMa(DanhSachMonHoc.TEN_FILE, mh.getMa());
+            kiemTraBatBuoc(DanhSachMonHoc.TEN_FILE, mh.getMa(), "tên môn", mh.getTenMon());
+        }
+        for (NguoiDung nd : dsNguoiDung.getTatCa()) {
+            kiemTraMa(DanhSachNguoiDung.TEN_FILE, nd.getMa());
+            kiemTraBatBuoc(DanhSachNguoiDung.TEN_FILE, nd.getMa(), "họ tên", nd.getHoTen());
+            if (nd instanceof ThiSinh) {
+                kiemTraBatBuoc(DanhSachNguoiDung.TEN_FILE, nd.getMa(), "lớp", ((ThiSinh) nd).getLop());
+            } else if (nd instanceof GiaoVien) {
+                kiemTraBatBuoc(DanhSachNguoiDung.TEN_FILE, nd.getMa(), "chuyên môn", ((GiaoVien) nd).getChuyenMon());
+            }
+        }
+        for (CauHoi ch : dsCauHoi.getTatCa()) {
+            kiemTraMa(DanhSachCauHoi.TEN_FILE, ch.getMa());
+            kiemTraBatBuoc(DanhSachCauHoi.TEN_FILE, ch.getMa(), "nội dung", ch.getNoiDung());
+            if (dsMonHoc.timTheoMa(ch.getMaMonHoc()) == null) {
+                themLoi(DanhSachCauHoi.TEN_FILE, ch.getMa() + " thuộc môn " + ch.getMaMonHoc() + " không tồn tại");
+            }
+        }
+        for (DeThi de : dsDeThi.getTatCa()) {
+            kiemTraMa(DanhSachDeThi.TEN_FILE, de.getMa());
+            kiemTraBatBuoc(DanhSachDeThi.TEN_FILE, de.getMa(), "tên đề", de.getTenDe());
+            if (dsMonHoc.timTheoMa(de.getMaMonHoc()) == null) {
+                themLoi(DanhSachDeThi.TEN_FILE, de.getMa() + " thuộc môn " + de.getMaMonHoc() + " không tồn tại");
+            }
+            if (de.getSoCauHoi() == 0) {
+                themLoi(DanhSachDeThi.TEN_FILE, de.getMa() + " không có câu hỏi nào");
+            }
+            for (String maCH : de.getDanhSachMaCauHoi()) {
+                CauHoi ch = dsCauHoi.timTheoMa(maCH);
+                if (ch == null) {
+                    themLoi(DanhSachDeThi.TEN_FILE, de.getMa() + " chứa câu " + maCH + " không tồn tại");
+                } else if (!ch.getMaMonHoc().equalsIgnoreCase(de.getMaMonHoc())) {
+                    themLoi(DanhSachDeThi.TEN_FILE, de.getMa() + " chứa câu " + maCH + " của môn khác ("
+                            + ch.getMaMonHoc() + ")");
+                }
+            }
+        }
+        for (KetQuaThi kq : dsKetQua.getTatCa()) {
+            kiemTraMa(DanhSachKetQua.TEN_FILE, kq.getMa());
+            if (!(dsNguoiDung.timTheoMa(kq.getMaThiSinh()) instanceof ThiSinh)) {
+                themLoi(DanhSachKetQua.TEN_FILE, kq.getMa() + " có thí sinh " + kq.getMaThiSinh() + " không tồn tại");
+            }
+            DeThi de = dsDeThi.timTheoMa(kq.getMaDeThi());
+            if (de == null) {
+                themLoi(DanhSachKetQua.TEN_FILE, kq.getMa() + " có đề " + kq.getMaDeThi() + " không tồn tại");
+                continue;
+            }
+            if (kq.getTongSoCau() != de.getSoCauHoi()) {
+                themLoi(DanhSachKetQua.TEN_FILE, kq.getMa() + " ghi " + kq.getTongSoCau() + " câu nhưng đề "
+                        + de.getMa() + " có " + de.getSoCauHoi() + " câu");
+                continue;
+            }
+            double[] khoang = khoangDiemHopLe(de, kq.getSoCauDung());
+            if (kq.getDiem() < khoang[0] || kq.getDiem() > khoang[1]) {
+                themLoi(DanhSachKetQua.TEN_FILE, kq.getMa() + " điểm " + kq.getDiem() + " không khớp "
+                        + kq.getSoCauDung() + "/" + kq.getTongSoCau() + " câu đúng (hợp lệ: " + moTaKhoang(khoang) + ")");
+            }
+        }
+    }
+
+    private void kiemTraMa(String tenFile, String ma) {
+        if (!NhapLieu.kiemTraMa(ma)) {
+            themLoi(tenFile, "mã \"" + ma + "\" sai định dạng (2-15 ký tự chữ in hoa, số hoặc '_')");
+        }
+    }
+
+    private void kiemTraBatBuoc(String tenFile, String ma, String tenTruong, String giaTri) {
+        if (giaTri == null || giaTri.isBlank()) {
+            themLoi(tenFile, ma + " thiếu " + tenTruong);
+        }
+    }
+
+    private void themLoi(String tenFile, String noiDung) {
+        loiDuLieu.add(tenFile + ": " + noiDung);
+    }
+
+    private void inLoiDuLieu(int gioiHan) {
+        for (int i = 0; i < Math.min(gioiHan, loiDuLieu.size()); i++) {
+            System.out.println("  - " + loiDuLieu.get(i));
+        }
+        if (loiDuLieu.size() > gioiHan) {
+            System.out.println("  ... và " + (loiDuLieu.size() - gioiHan) + " lỗi khác.");
+        }
+    }
+
+    // ======================= KHOẢNG ĐIỂM HỢP LỆ CỦA MỘT KẾT QUẢ =======================
+
+    /**
+     * Khoảng điểm [thấp nhất, cao nhất] có thể đạt khi làm đúng hoàn toàn soCauDung câu của đề,
+     * theo đúng quy tắc chấm của BuoiThi: mỗi câu 10/n điểm, câu sai được 0 điểm,
+     * riêng câu nhiều đáp án chọn đúng nhưng thiếu được điểm từng phần (tối đa (m-1)/m số điểm của câu).
+     * - Thấp nhất: soCauDung câu đúng, các câu còn lại 0 điểm.
+     * - Cao nhất: các câu sai rơi vào những câu nhiều đáp án có điểm từng phần lớn nhất.
+     * Hai đầu được làm tròn ra ngoài 0,01 vì điểm lưu trong file đã làm tròn 2 chữ số.
+     */
+    private double[] khoangDiemHopLe(DeThi de, int soCauDung) {
+        int tongSoCau = de.getSoCauHoi();
+        if (tongSoCau == 0) {
+            return new double[] {0, 0};
+        }
+        double diemMoiCau = 10.0 / tongSoCau;
+        List<Double> diemTungPhan = new ArrayList<>();
+        for (String maCH : de.getDanhSachMaCauHoi()) {
+            CauHoi ch = dsCauHoi.timTheoMa(maCH);
+            if (ch instanceof CauHoiNhieuDapAn) { // ĐA HÌNH: chỉ loại này có điểm từng phần
+                int soDapAn = ((CauHoiNhieuDapAn) ch).getDapAnDung().length();
+                diemTungPhan.add(diemMoiCau * (soDapAn - 1) / soDapAn);
+            }
+        }
+        diemTungPhan.sort(Comparator.reverseOrder());
+        double thapNhat = soCauDung * diemMoiCau;
+        double caoNhat = thapNhat;
+        for (int i = 0; i < Math.min(tongSoCau - soCauDung, diemTungPhan.size()); i++) {
+            caoNhat += diemTungPhan.get(i);
+        }
+        caoNhat = Math.min(10.0, caoNhat);
+        return new double[] {Math.floor(thapNhat * 100 + 1e-9) / 100, Math.ceil(caoNhat * 100 - 1e-9) / 100};
+    }
+
+    private static String moTaKhoang(double[] khoang) {
+        return khoang[1] - khoang[0] < 0.015
+                ? String.format("%.2f", khoang[0])
+                : String.format("%.2f - %.2f", khoang[0], khoang[1]);
+    }
+
+    /**
+     * Nhập điểm nằm trong khoảng hợp lệ. Nếu khoảng chỉ có một giá trị (đề không có câu nhiều đáp án)
+     * thì tự tính điểm, không cần nhập. macDinh != null: Enter để giữ điểm cũ nếu điểm cũ vẫn hợp lệ.
+     */
+    private double nhapDiemHopLe(DeThi de, int soCauDung, Double macDinh) {
+        double[] khoang = khoangDiemHopLe(de, soCauDung);
+        if (khoang[1] - khoang[0] < 0.015) {
+            double diem = NhapLieu.lamTron2(soCauDung * 10.0 / de.getSoCauHoi());
+            System.out.printf("Điểm tự tính theo số câu đúng: %.2f%n", diem);
+            return diem;
+        }
+        System.out.println("(Câu nhiều đáp án được điểm từng phần nên điểm hợp lệ nằm trong khoảng "
+                + moTaKhoang(khoang) + ")");
+        String nhan = "Điểm (" + moTaKhoang(khoang) + ")";
+        if (macDinh != null && macDinh >= khoang[0] && macDinh <= khoang[1]) {
+            return NhapLieu.nhapSoThucTuyChon(nhan, khoang[0], khoang[1], macDinh);
+        }
+        if (macDinh != null) {
+            System.out.println("Điểm cũ " + macDinh + " không còn khớp số câu đúng, hãy nhập lại.");
+        }
+        return NhapLieu.nhapSoThuc(nhan, khoang[0], khoang[1]);
     }
 
     public void luuTatCa() {
@@ -158,7 +331,7 @@ public class QuanLyThiTracNghiem {
     /** Có file lỗi thì chỉ xem, tránh thay đổi dữ liệu dựa trên danh sách thiếu. */
     private boolean coFileLoi() {
         return dsMonHoc.coLoiDoc() || dsNguoiDung.coLoiDoc() || dsCauHoi.coLoiDoc()
-                || dsDeThi.coLoiDoc() || dsKetQua.coLoiDoc();
+                || dsDeThi.coLoiDoc() || dsKetQua.coLoiDoc() || !loiDuLieu.isEmpty();
     }
 
     /** Chọn mã môn học đang tồn tại; macDinh != null thì Enter để giữ môn cũ. */
@@ -720,7 +893,7 @@ public class QuanLyThiTracNghiem {
         DeThi de = chonDeThi();
         int tongSoCau = de.getSoCauHoi();
         int soCauDung = NhapLieu.nhapSoNguyen("Số câu đúng (0-" + tongSoCau + ")", 0, tongSoCau);
-        double diem = NhapLieu.nhapSoThuc("Điểm (0-10)", 0, 10);
+        double diem = nhapDiemHopLe(de, soCauDung, null); // điểm phải khớp số câu đúng
         LocalDate ngayThi = NhapLieu.nhapNgay("Ngày thi");
         thongBao(dsKetQua.them(new KetQuaThi(ma, ts.getMa(), de.getMa(), NhapLieu.lamTron2(diem),
                 soCauDung, tongSoCau, ngayThi)), "thêm kết quả", ma);
@@ -732,11 +905,17 @@ public class QuanLyThiTracNghiem {
             System.out.println("Không tìm thấy kết quả.");
             return;
         }
+        DeThi de = dsDeThi.timTheoMa(cu.getMaDeThi());
+        if (de == null || de.getSoCauHoi() != cu.getTongSoCau()) {
+            System.out.println("Không sửa được: đề " + cu.getMaDeThi() + " không còn khớp với kết quả này.");
+            return;
+        }
         dsKetQua.hienThiDanhSach(List.of(cu));
         System.out.println(GOI_Y_GIU_NGUYEN);
-        double diem = NhapLieu.nhapSoThucTuyChon("Điểm (0-10)", 0, 10, cu.getDiem());
+        // Nhập số câu đúng TRƯỚC, vì khoảng điểm hợp lệ phụ thuộc vào số câu đúng
         int soCauDung = NhapLieu.nhapSoNguyenTuyChon("Số câu đúng (0-" + cu.getTongSoCau() + ")",
                 0, cu.getTongSoCau(), cu.getSoCauDung());
+        double diem = nhapDiemHopLe(de, soCauDung, cu.getDiem());
         LocalDate ngayThi = NhapLieu.nhapNgayTuyChon("Ngày thi", cu.getNgayThi());
         KetQuaThi moi = new KetQuaThi(cu.getMa(), cu.getMaThiSinh(), cu.getMaDeThi(),
                 NhapLieu.lamTron2(diem), soCauDung, cu.getTongSoCau(), ngayThi);
@@ -793,6 +972,12 @@ public class QuanLyThiTracNghiem {
                     inThongTinFile(dsCauHoi, "Câu hỏi");
                     inThongTinFile(dsDeThi, "Đề thi");
                     inThongTinFile(dsKetQua, "Kết quả thi");
+                    if (loiDuLieu.isEmpty()) {
+                        System.out.println("  Kiểm tra liên kết dữ liệu: không có lỗi.");
+                    } else {
+                        System.out.println("  Dữ liệu có " + loiDuLieu.size() + " lỗi:");
+                        inLoiDuLieu(Integer.MAX_VALUE);
+                    }
                 }
                 case 2 -> luuTatCa();
                 case 3 -> taiDuLieu();

@@ -1,9 +1,9 @@
 # ĐỒ ÁN: ỨNG DỤNG QUẢN LÝ THI TRẮC NGHIỆM (Java 17, console)
 
 > Đã biên dịch bằng `javac --release 17` và chạy thử toàn bộ kịch bản demo, kể cả các trường hợp nhập sai, file dữ liệu lỗi và thư mục `data/` chưa tồn tại.
-> Tổng cộng **23 lớp** (không tính 3 interface và `Main`), khoảng 3.983 dòng mã.
+> Tổng cộng **23 lớp** (không tính 3 interface và `Main`), khoảng 4.290 dòng mã.
 >
-> **Bổ sung:** chức năng **Thống kê - báo cáo** (menu 7, lớp `ThongKe` + `ThongKeDiem`) và bộ dữ liệu mẫu **≥ 50 bản ghi cho mỗi file** (50 môn học, 60 người dùng = 50 thí sinh + 10 giáo viên, 80 câu hỏi, 50 đề thi, 150 kết quả thi).
+> **Bổ sung:** chức năng **Thống kê - báo cáo** (menu 7, lớp `ThongKe` + `ThongKeDiem`) và bộ dữ liệu mẫu **≥ 50 bản ghi cho mỗi file** (50 môn học, 62 người dùng = 50 thí sinh + 12 giáo viên, 80 câu hỏi, 50 đề thi, 150 kết quả thi).
 
 ## 1. Hướng dẫn chạy chương trình
 
@@ -34,13 +34,13 @@ cd "C:\Users\Admin\OneDrive - Saigon University\Documents\QuanLyThiTracNghiem"
 [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
 ```
 
-**Bước 3 – Biên dịch** (chỉ cần làm lại khi có sửa code). Các file `.class` được tạo trong thư mục `out/`:
+**Bước 3 – Biên dịch** (bắt buộc làm ở mỗi máy mới, và làm lại khi có sửa code). Các file `.class` được tạo trong thư mục `out/`; thư mục này không được đưa lên Git nên luôn phải tự biên dịch:
 
 ```powershell
-javac -encoding UTF-8 -d out src\tracnghiem\*.java
+javac --release 17 -encoding UTF-8 -d out src\tracnghiem\*.java
 ```
 
-Biên dịch thành công thì không in ra gì (có thể có 1 dòng `warning`, không sao).
+`--release 17` bảo đảm file `.class` chạy được trên mọi máy có Java 17 trở lên, kể cả khi máy biên dịch cài JDK mới hơn (21, 25...). Biên dịch thành công thì không in ra gì.
 
 **Bước 4 – Chạy chương trình:**
 
@@ -48,14 +48,14 @@ Biên dịch thành công thì không in ra gì (có thể có 1 dòng `warning`
 java "-Dfile.encoding=UTF-8" -cp out tracnghiem.Main
 ```
 
-Màn hình hiện dòng `Đã đọc: 50 môn học, 60 người dùng, 80 câu hỏi, 50 đề thi, 150 kết quả.` và menu chính là chạy đúng. Gõ số tương ứng rồi Enter để chọn chức năng, gõ `0` để thoát.
+Màn hình hiện dòng `Đã đọc: 50 môn học, 62 người dùng, 80 câu hỏi, 50 đề thi, 150 kết quả.` và menu chính là chạy đúng. Gõ số tương ứng rồi Enter để chọn chức năng, gõ `0` để thoát.
 
 ### 1.3. Chạy bằng Command Prompt (cmd)
 
 ```bat
 cd /d "C:\Users\Admin\OneDrive - Saigon University\Documents\QuanLyThiTracNghiem"
 chcp 65001
-javac -encoding UTF-8 -d out src\tracnghiem\*.java
+javac --release 17 -encoding UTF-8 -d out src\tracnghiem\*.java
 java -Dfile.encoding=UTF-8 -cp out tracnghiem.Main
 ```
 
@@ -70,7 +70,7 @@ java -Dfile.encoding=UTF-8 -cp out tracnghiem.Main
 
 ```bash
 cd đường/dẫn/tới/QuanLyThiTracNghiem
-javac -encoding UTF-8 -d out src/tracnghiem/*.java
+javac --release 17 -encoding UTF-8 -d out src/tracnghiem/*.java
 java -cp out tracnghiem.Main
 ```
 
@@ -82,8 +82,9 @@ java -cp out tracnghiem.Main
 | Chữ tiếng Việt hiện thành `?` hoặc ký tự lạ | Console chưa ở chế độ UTF-8 | Chạy lại Bước 2 (PowerShell) hoặc `chcp 65001` (cmd) trước khi chạy |
 | `Đã đọc: 0 môn học, 0 người dùng, ...` | Đang đứng sai thư mục | `cd` về thư mục gốc đồ án (có `data/`) rồi chạy lại |
 | `Error: Could not find or load main class tracnghiem.Main` | Chưa biên dịch hoặc sai `-cp` | Chạy lại Bước 3, kiểm tra có thư mục `out\tracnghiem\` |
-| `UnsupportedClassVersionError` | Lệnh `java` cũ hơn `javac` (máy có nhiều bản Java) | Kiểm tra `java -version` và `javac -version` phải cùng bản 17+, hoặc biên dịch lại |
+| `UnsupportedClassVersionError` | File `.class` được biên dịch bằng JDK mới hơn bản `java` đang chạy | Xóa thư mục `out\` rồi biên dịch lại bằng lệnh ở Bước 3 (có `--release 17`) |
 | `Cảnh báo: bỏ qua dòng N trong data/...` | Dòng trong file dữ liệu bị sai định dạng | Sửa lại dòng đó (lưu file dạng UTF-8), các dòng khác vẫn đọc bình thường |
+| `CẢNH BÁO: dữ liệu có N lỗi...` | Mã sai định dạng, thiếu trường bắt buộc, hoặc liên kết hỏng giữa các file (câu hỏi/đề trỏ tới môn không tồn tại, kết quả trỏ tới thí sinh/đề không tồn tại, điểm không khớp số câu đúng) | Sửa đúng các dòng được liệt kê rồi chọn 8 → 3 để đọc lại. Trong lúc còn lỗi chương trình chỉ cho xem/tìm kiếm |
 
 ### 1.7. Khôi phục dữ liệu mẫu
 
