@@ -7,6 +7,13 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 import java.util.Scanner;
+import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
@@ -19,6 +26,14 @@ public class NhapLieu {
 
     // THUỘC TÍNH STATIC: Scanner dùng chung cho toàn chương trình
     private static Scanner sc = new Scanner(System.in, StandardCharsets.UTF_8);
+
+    private static final ExecutorService LUONG_DOC = Executors.newSingleThreadExecutor(viec -> {
+        Thread luong = new Thread(viec, "doc-ban-phim");
+        luong.setDaemon(true);
+        return luong;
+    });
+    private static Future<String> dangDoc;
+    private static volatile long lucNhan;
 
     // THUỘC TÍNH STATIC: định dạng ngày dd/MM/yyyy, chế độ STRICT để chặn ngày sai như 31/02
     public static final DateTimeFormatter DINH_DANG_NGAY =
@@ -35,6 +50,7 @@ public class NhapLieu {
 
     /** Constructor có tham số: cho phép thay nguồn nhập dùng chung (ví dụ khi kiểm thử). */
     public NhapLieu(Scanner nguonNhap) {
+        if (dangDoc != null) throw new IllegalStateException("Đang đọc, chưa được đổi nguồn nhập.");
         if (nguonNhap != null) {
             sc = nguonNhap;
         }
@@ -42,14 +58,51 @@ public class NhapLieu {
 
     // ================== PHƯƠNG THỨC STATIC ĐỌC DÒNG ==================
 
-    /** Đọc một dòng; nếu hết dữ liệu nhập (Ctrl+D / Ctrl+Z) thì kết thúc chương trình êm đẹp. */
+    /** Đọc một dòng; hết dữ liệu nhập sẽ được xử lý tại Main hoặc buổi thi. */
     private static String docDong() {
-        if (!sc.hasNextLine()) {
-            System.out.println();
-            System.out.println("Không còn dữ liệu nhập. Chương trình kết thúc.");
-            System.exit(0);
+        return docDong(Long.MAX_VALUE);
+    }
+
+    /** null = hết giờ; hết nguồn nhập ném NoSuchElementException. */
+    private static String docDong(long hanChot) {
+        if (hanChot != Long.MAX_VALUE && System.nanoTime() >= hanChot) return null;
+        if (dangDoc == null) {
+            dangDoc = LUONG_DOC.submit(() -> {
+                if (!sc.hasNextLine()) throw new NoSuchElementException("Hết dữ liệu nhập");
+                String dong = sc.nextLine().trim();
+                lucNhan = System.nanoTime();
+                return dong;
+            });
         }
-        return sc.nextLine().trim();
+        try {
+            String dong = hanChot == Long.MAX_VALUE ? dangDoc.get()
+                    : dangDoc.get(Math.max(1, hanChot - System.nanoTime()), TimeUnit.NANOSECONDS);
+            dangDoc = null;
+            return hanChot != Long.MAX_VALUE && lucNhan > hanChot ? null : dong;
+        } catch (TimeoutException e) {
+            return null; // Giữ lần đọc cũ để bỏ dòng đến muộn, không tạo Scanner khác.
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Việc nhập bị ngắt", e);
+        } catch (ExecutionException e) {
+            dangDoc = null;
+            if (e.getCause() instanceof NoSuchElementException)
+                throw (NoSuchElementException) e.getCause();
+            throw new IllegalStateException("Không đọc được dữ liệu", e.getCause());
+        }
+    }
+
+    public static String nhapTraLoiCoHan(String nhanDe, long hanChot) {
+        System.out.print(nhanDe + ": ");
+        return docDong(hanChot);
+    }
+
+    /** Gọi SAU khi chấm/lưu; bỏ dòng nhập muộn để nó không trở thành lệnh menu. */
+    public static void boQuaDongDenMuon() {
+        if (dangDoc != null) {
+            System.out.println("Bài thi đã kết thúc. Nhấn Enter để trở về menu (dòng nhập muộn sẽ bỏ qua).");
+            docDong();
+        }
     }
 
     // ================== PHƯƠNG THỨC STATIC KIỂM TRA DỮ LIỆU ==================

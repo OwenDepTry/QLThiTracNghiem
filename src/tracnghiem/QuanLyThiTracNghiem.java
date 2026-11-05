@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * Lớp điều khiển chương trình: menu chính và menu con cho từng thực thể.
@@ -46,6 +47,11 @@ public class QuanLyThiTracNghiem {
         int soCau = dsCauHoi.docLai();
         int soDe = dsDeThi.docLai();
         int soKetQua = dsKetQua.docLai();
+        // Không tự sinh lại mã còn được lưu trong lịch sử, kể cả dữ liệu cũ bị thiếu người/đề.
+        for (KetQuaThi kq : dsKetQua.getTatCa()) {
+            ThiSinh.capNhatBoDem(kq.getMaThiSinh());
+            DeThi.capNhatBoDem(kq.getMaDeThi());
+        }
         System.out.printf("Đã đọc: %d môn học, %d người dùng, %d câu hỏi, %d đề thi, %d kết quả.%n",
                 soMon, soNguoi, soCau, soDe, soKetQua);
     }
@@ -76,7 +82,7 @@ public class QuanLyThiTracNghiem {
             System.out.println("0. Thoát");
             int chon = NhapLieu.nhapSoNguyen("Chọn chức năng", 0, 8);
             if (chon == 0) {
-                System.out.println("Dữ liệu đã được lưu sau mỗi thao tác. Tạm biệt!");
+                System.out.println("Tạm biệt!");
                 return;
             }
             try {
@@ -86,11 +92,16 @@ public class QuanLyThiTracNghiem {
                     case 3 -> menuCauHoi();
                     case 4 -> menuDeThi();
                     case 5 -> menuKetQua();
-                    case 6 -> buoiThi.toChucThi();
+                    case 6 -> {
+                        if (coFileLoi()) System.out.println("Hãy sửa file lỗi rồi chọn 8 -> 3 để đọc lại trước khi thi.");
+                        else buoiThi.toChucThi();
+                    }
                     case 7 -> thongKe.menu();
                     case 8 -> menuFile();
                     default -> System.out.println("Chức năng không hợp lệ.");
                 }
+            } catch (NoSuchElementException e) {
+                throw e;
             } catch (RuntimeException e) {
                 // Lưới an toàn cuối cùng: không để chương trình bị dừng đột ngột
                 System.out.println("Đã xảy ra lỗi: " + e.getMessage() + ". Vui lòng thử lại.");
@@ -107,7 +118,12 @@ public class QuanLyThiTracNghiem {
         System.out.println("4. Xóa");
         System.out.println("5. Tìm kiếm");
         System.out.println("0. Quay lại");
-        return NhapLieu.nhapSoNguyen("Chọn", 0, 5);
+        int chon = NhapLieu.nhapSoNguyen("Chọn", 0, 5);
+        if (chon >= 2 && chon <= 4 && coFileLoi()) {
+            System.out.println("Chỉ xem/tìm kiếm: có file lỗi. Sửa file gốc rồi chọn 8 -> 3 để đọc lại.");
+            return 0;
+        }
+        return chon;
     }
 
     // ======================= TIỆN ÍCH CHUNG =======================
@@ -116,10 +132,12 @@ public class QuanLyThiTracNghiem {
     private String nhapMaMoi(String maGoiY, DanhSach<?> danhSach) {
         while (true) {
             String ma = NhapLieu.nhapMaTuyChon("Mã (Enter để dùng mã tự sinh)", maGoiY);
-            if (danhSach.timTheoMa(ma) == null) {
+            boolean coLichSu = (danhSach == dsNguoiDung && !dsKetQua.timTheoThiSinh(ma).isEmpty())
+                    || (danhSach == dsDeThi && !dsKetQua.timTheoDeThi(ma).isEmpty());
+            if (danhSach.timTheoMa(ma) == null && !coLichSu) {
                 return ma;
             }
-            System.out.println("Lỗi: mã " + ma + " đã tồn tại, vui lòng nhập mã khác.");
+            System.out.println("Lỗi: mã " + ma + " đã tồn tại hoặc có lịch sử, vui lòng nhập mã khác.");
         }
     }
 
@@ -137,8 +155,16 @@ public class QuanLyThiTracNghiem {
         }
     }
 
+    /** Có file lỗi thì chỉ xem, tránh thay đổi dữ liệu dựa trên danh sách thiếu. */
+    private boolean coFileLoi() {
+        return dsMonHoc.coLoiDoc() || dsNguoiDung.coLoiDoc() || dsCauHoi.coLoiDoc()
+                || dsDeThi.coLoiDoc() || dsKetQua.coLoiDoc();
+    }
+
     /** Chọn mã môn học đang tồn tại; macDinh != null thì Enter để giữ môn cũ. */
     private String chonMonHoc(String macDinh) {
+        if (dsMonHoc.soLuong() == 0)
+            throw new IllegalStateException("Chưa có môn học, hãy thêm môn trước");
         StringBuilder sb = new StringBuilder("Các môn hiện có: ");
         for (MonHoc mh : dsMonHoc.getTatCa()) {
             sb.append(mh.getMa()).append(" (").append(mh.getTenMon()).append(")  ");
@@ -205,12 +231,8 @@ public class QuanLyThiTracNghiem {
         List<DeThi> deDangDung = dsDeThi.timTheoMonHoc(mh.getMa());
         List<CauHoi> cauDangDung = dsCauHoi.timTheoMonHoc(mh.getMa());
         if (!deDangDung.isEmpty() || !cauDangDung.isEmpty()) {
-            System.out.println("CẢNH BÁO: môn học đang được dùng bởi " + deDangDung.size()
-                    + " đề thi và " + cauDangDung.size() + " câu hỏi.");
-            for (DeThi de : deDangDung) {
-                System.out.println("   - Đề " + de.getMa() + ": " + de.getTenDe());
-            }
-            System.out.println("Nếu xóa, các đề thi/câu hỏi này sẽ trỏ tới môn học không còn tồn tại.");
+            System.out.println("Không thể xóa: môn đang có câu hỏi hoặc đề thi.");
+            return;
         }
         if (NhapLieu.xacNhan("Bạn chắc chắn muốn xóa môn " + mh.getMa() + "?")) {
             thongBao(dsMonHoc.xoa(mh.getMa()), "xóa môn học", mh.getMa());
@@ -296,7 +318,8 @@ public class QuanLyThiTracNghiem {
         dsNguoiDung.hienThiDanhSach(List.of(nd));
         int soKetQua = dsKetQua.timTheoThiSinh(nd.getMa()).size();
         if (soKetQua > 0) {
-            System.out.println("Lưu ý: người dùng này có " + soKetQua + " kết quả thi, kết quả vẫn được giữ lại.");
+            System.out.println("Không thể xóa: thí sinh đã có kết quả thi.");
+            return;
         }
         if (NhapLieu.xacNhan("Bạn chắc chắn muốn xóa " + nd.getMa() + "?")) {
             thongBao(dsNguoiDung.xoa(nd.getMa()), "xóa người dùng", nd.getMa());
@@ -425,19 +448,39 @@ public class QuanLyThiTracNghiem {
             System.out.println("Không tìm thấy câu hỏi.");
             return;
         }
+        for (DeThi de : dsDeThi.timDeChuaCauHoi(cu.getMa())) {
+            if (!dsKetQua.timTheoDeThi(de.getMa()).isEmpty()) {
+                System.out.println("Không sửa câu thuộc đề đã có kết quả. Hãy tạo câu mới.");
+                return;
+            }
+        }
         cu.hienThi(); // ĐA HÌNH
         System.out.println(GOI_Y_GIU_NGUYEN);
         String noiDung = NhapLieu.nhapChuoiTuyChon("Nội dung", cu.getNoiDung());
         String maMon = chonMonHoc(cu.getMaMonHoc());
+        if (!maMon.equalsIgnoreCase(cu.getMaMonHoc())
+                && !dsDeThi.timDeChuaCauHoi(cu.getMa()).isEmpty()) {
+            System.out.println("Không đổi môn: câu đang nằm trong đề thi.");
+            return;
+        }
         int doKho = NhapLieu.nhapSoNguyenTuyChon("Độ khó (1-3)", 1, 3, cu.getDoKho());
         CauHoi moi;
         if (NhapLieu.xacNhan("Có nhập lại lựa chọn/đáp án không?")) {
             moi = taoCauHoiTheoLoai(layLoaiCauHoi(cu), cu.getMa(), noiDung, maMon, doKho);
         } else {
-            cu.setNoiDung(noiDung);
-            cu.setMaMonHoc(maMon);
-            cu.setDoKho(doKho);
-            moi = cu;
+            // Tạo bản mới để khi lưu thất bại, đối tượng cũ vẫn nguyên vẹn.
+            if (cu instanceof CauHoiMotDapAn) {
+                CauHoiMotDapAn ch = (CauHoiMotDapAn) cu;
+                moi = new CauHoiMotDapAn(cu.getMa(), noiDung, maMon, doKho,
+                        ch.getDanhSachLuaChon(), ch.getDapAnDung());
+            } else if (cu instanceof CauHoiNhieuDapAn) {
+                CauHoiNhieuDapAn ch = (CauHoiNhieuDapAn) cu;
+                moi = new CauHoiNhieuDapAn(cu.getMa(), noiDung, maMon, doKho,
+                        ch.getDanhSachLuaChon(), ch.getDapAnDung());
+            } else {
+                moi = new CauHoiDungSai(cu.getMa(), noiDung, maMon, doKho,
+                        ((CauHoiDungSai) cu).isDapAnDung());
+            }
         }
         thongBao(dsCauHoi.sua(cu.getMa(), moi), "sửa câu hỏi", cu.getMa());
     }
@@ -448,25 +491,14 @@ public class QuanLyThiTracNghiem {
             System.out.println("Không tìm thấy câu hỏi.");
             return;
         }
+        if (!dsDeThi.timDeChuaCauHoi(ch.getMa()).isEmpty()) {
+            System.out.println("Không thể xóa: câu hỏi đang nằm trong đề thi.");
+            return;
+        }
         ch.hienThi();
-        List<DeThi> deDangDung = dsDeThi.timDeChuaCauHoi(ch.getMa());
-        if (!deDangDung.isEmpty()) {
-            System.out.println("CẢNH BÁO: câu hỏi đang được dùng trong " + deDangDung.size() + " đề thi:");
-            for (DeThi de : deDangDung) {
-                System.out.println("   - Đề " + de.getMa() + ": " + de.getTenDe());
-            }
-            System.out.println("Nếu xóa, câu hỏi sẽ được gỡ khỏi các đề thi trên.");
-        }
-        if (NhapLieu.xacNhan("Bạn chắc chắn muốn xóa câu hỏi " + ch.getMa() + "?")) {
-            boolean daXoa = dsCauHoi.xoa(ch.getMa());
-            thongBao(daXoa, "xóa câu hỏi", ch.getMa());
-            if (daXoa && !deDangDung.isEmpty()) {
-                int soDe = dsDeThi.goCauHoiKhoiCacDe(ch.getMa());
-                System.out.println("Đã gỡ câu hỏi khỏi " + soDe + " đề thi và ghi file đề thi.");
-            }
-        } else {
-            System.out.println("Đã hủy xóa.");
-        }
+        if (NhapLieu.xacNhan("Bạn chắc chắn muốn xóa câu hỏi " + ch.getMa() + "?"))
+            thongBao(dsCauHoi.xoa(ch.getMa()), "xóa câu hỏi", ch.getMa());
+        else System.out.println("Đã hủy xóa.");
     }
 
     private void timCauHoi() {
@@ -581,6 +613,10 @@ public class QuanLyThiTracNghiem {
             System.out.println("Không tìm thấy đề thi.");
             return;
         }
+        if (!dsKetQua.timTheoDeThi(cu.getMa()).isEmpty()) {
+            System.out.println("Không sửa đề đã có kết quả. Hãy tạo đề mới để giữ lịch sử.");
+            return;
+        }
         dsDeThi.hienThiDanhSach(List.of(cu));
         System.out.println(GOI_Y_GIU_NGUYEN);
         String ten = NhapLieu.nhapChuoiTuyChon("Tên đề thi", cu.getTenDe());
@@ -613,7 +649,8 @@ public class QuanLyThiTracNghiem {
         dsDeThi.hienThiDanhSach(List.of(de));
         int soKetQua = dsKetQua.timTheoDeThi(de.getMa()).size();
         if (soKetQua > 0) {
-            System.out.println("Lưu ý: đề này có " + soKetQua + " kết quả thi, kết quả vẫn được giữ lại.");
+            System.out.println("Không thể xóa: đề đã có kết quả thi.");
+            return;
         }
         if (NhapLieu.xacNhan("Bạn chắc chắn muốn xóa đề " + de.getMa() + "?")) {
             thongBao(dsDeThi.xoa(de.getMa()), "xóa đề thi", de.getMa());

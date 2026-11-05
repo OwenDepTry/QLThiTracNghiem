@@ -39,6 +39,8 @@ public class ThongKeDiem {
 
     /** Cộng thêm một điểm vào nhóm. */
     public void them(double diem) {
+        if (!Double.isFinite(diem) || diem < 0 || diem > 10)
+            throw new IllegalArgumentException("Điểm phải hữu hạn, từ 0 đến 10.");
         if (soLuot == 0) {
             diemCaoNhat = diem;
             diemThapNhat = diem;

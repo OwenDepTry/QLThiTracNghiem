@@ -3,6 +3,7 @@ package tracnghiem;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 /**
  * Tổ chức một buổi thi: chọn thí sinh, chọn đề, làm bài có tính giờ, chấm điểm, lưu KetQuaThi.
@@ -16,6 +17,7 @@ public class BuoiThi {
     private DanhSachDeThi dsDeThi;
     private DanhSachCauHoi dsCauHoi;
     private DanhSachKetQua dsKetQua;
+    private boolean hetNguonNhap;
 
     /** Constructor không tham số: tự tạo các danh sách và đọc dữ liệu từ thư mục data/. */
     public BuoiThi() {
@@ -62,14 +64,18 @@ public class BuoiThi {
             System.out.println("Đã hủy buổi thi.");
             return;
         }
+        hetNguonNhap = false;
         KetQuaThi ketQua = lamBai(thiSinh, deThi);
         if (ketQua != null) {
             if (dsKetQua.them(ketQua)) {
                 System.out.println("Đã lưu kết quả " + ketQua.getMa() + " vào file " + dsKetQua.getDuongDanFile() + ".");
             } else {
-                System.out.println("Lỗi: không lưu được kết quả (trùng mã " + ketQua.getMa() + ").");
+                System.out.println("Chưa lưu được kết quả. Giữ dòng sau để phục hồi sau khi sửa lỗi ghi file:");
+                System.out.println(ketQua.toFileString());
             }
         }
+        NhapLieu.boQuaDongDenMuon();
+        if (hetNguonNhap) throw new NoSuchElementException("Hết dữ liệu nhập");
     }
 
     private ThiSinh chonThiSinh(List<ThiSinh> cacThiSinh) {
@@ -120,8 +126,13 @@ public class BuoiThi {
         for (String maCH : deThi.getDanhSachMaCauHoi()) {
             CauHoi ch = dsCauHoi.timTheoMa(maCH);
             if (ch == null) {
-                System.out.println("Cảnh báo: câu hỏi " + maCH + " không còn tồn tại, bỏ qua.");
+                System.out.println("Đề có mã câu không tồn tại, không thể thi: " + maCH);
+                return null;
             } else {
+                if (!ch.getMaMonHoc().equalsIgnoreCase(deThi.getMaMonHoc())) {
+                    System.out.println("Đề chứa câu sai môn, không thể thi: " + maCH);
+                    return null;
+                }
                 cacCauHoi.add(ch);
             }
         }
@@ -133,7 +144,7 @@ public class BuoiThi {
         int soCau = cacCauHoi.size();
         double diemMoiCau = 10.0 / soCau;
         String[] cacTraLoi = new String[soCau];
-        long hetGioLuc = System.currentTimeMillis() + deThi.getThoiGianLamBai() * 60_000L;
+        long hetGioLuc = System.nanoTime() + deThi.getThoiGianLamBai() * 60_000_000_000L;
 
         System.out.println();
         System.out.println("Đề: " + deThi.getTenDe() + " | " + soCau + " câu | " + deThi.getThoiGianLamBai() + " phút");
@@ -141,8 +152,8 @@ public class BuoiThi {
 
         for (int i = 0; i < soCau; i++) {
             CauHoi ch = cacCauHoi.get(i);
-            long conLai = (hetGioLuc - System.currentTimeMillis()) / 1000;
-            if (conLai <= 0) {
+            long conLai = Math.max(0, (hetGioLuc - System.nanoTime()) / 1_000_000_000L);
+            if (System.nanoTime() >= hetGioLuc) {
                 System.out.println("HẾT GIỜ! Các câu còn lại không được tính.");
                 break;
             }
@@ -152,14 +163,20 @@ public class BuoiThi {
             System.out.println("  Hướng dẫn: " + ch.getHuongDanTraLoi()); // ĐA HÌNH
             String traLoi;
             while (true) {
-                traLoi = NhapLieu.nhapChuoiCoTheRong("  Trả lời");
-                if (traLoi.isEmpty() || ch.laTraLoiHopLe(traLoi)) { // ĐA HÌNH
+                try {
+                    traLoi = NhapLieu.nhapTraLoiCoHan("  Trả lời", hetGioLuc);
+                } catch (NoSuchElementException e) {
+                    hetNguonNhap = true;
+                    traLoi = null;
+                }
+                if (traLoi == null || traLoi.isEmpty() || ch.laTraLoiHopLe(traLoi)) { // ĐA HÌNH
                     break;
                 }
                 System.out.println("  Lỗi: câu trả lời không hợp lệ. " + ch.getHuongDanTraLoi());
             }
-            if (System.currentTimeMillis() > hetGioLuc) {
-                System.out.println("HẾT GIỜ! Câu trả lời vừa nhập không được tính.");
+            if (traLoi == null) {
+                System.out.println(hetNguonNhap ? "Đầu vào đóng: nộp phần đã làm."
+                        : "HẾT GIỜ! Tự động nộp bài, đáp án đến muộn không được tính.");
                 break;
             }
             cacTraLoi[i] = traLoi;

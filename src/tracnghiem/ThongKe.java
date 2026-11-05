@@ -1,12 +1,9 @@
 package tracnghiem;
 
-import java.io.FileOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -251,11 +248,7 @@ public class ThongKe {
         if (!kiemTraCoKetQua()) {
             return;
         }
-        List<ThongKeDiem> ds = new ArrayList<>(nhomKetQua(KetQuaThi::getMaThiSinh).values());
-        ds.sort(Comparator.comparingDouble(ThongKeDiem::getTrungBinh)
-                .thenComparingDouble(ThongKeDiem::getDiemCaoNhat)
-                .thenComparingInt(ThongKeDiem::getSoLuot)
-                .reversed());
+        List<ThongKeDiem> ds = danhSachXepHang();
         String dinhDang = "%-5s %-7s %-24s %-8s %5s %6s %6s %6s  %s%n";
         System.out.printf(dinhDang, "Hạng", "Mã", "Họ tên", "Lớp", "Lượt", "TB", "Cao", "Thấp", "Xếp loại TB");
         System.out.println("-".repeat(90));
@@ -435,46 +428,48 @@ public class ThongKe {
                     chenh > 0 ? "tiến bộ" : chenh < 0 ? "giảm" : "không đổi");
         }
         // Xếp hạng của thí sinh trong toàn bộ thí sinh đã thi
-        List<ThongKeDiem> tatCa = new ArrayList<>(nhomKetQua(KetQuaThi::getMaThiSinh).values());
+        List<ThongKeDiem> tatCa = danhSachXepHang();
         int hang = 1;
         for (ThongKeDiem khac : tatCa) {
-            if (khac.getTrungBinh() > tk.getTrungBinh()) {
-                hang++;
-            }
+            if (khac.getTenNhom().equalsIgnoreCase(ts.getMa())) break;
+            hang++;
         }
         System.out.println("Xếp hạng theo điểm trung bình: " + hang + "/" + tatCa.size());
     }
 
+    /** Dùng chung thứ tự; điểm bằng nhau thì xét điểm cao nhất, số lượt, rồi mã. */
+    private List<ThongKeDiem> danhSachXepHang() {
+        List<ThongKeDiem> ds = new ArrayList<>(nhomKetQua(KetQuaThi::getMaThiSinh).values());
+        ds.sort(Comparator.comparingDouble(ThongKeDiem::getTrungBinh)
+                .thenComparingDouble(ThongKeDiem::getDiemCaoNhat)
+                .thenComparingInt(ThongKeDiem::getSoLuot).reversed()
+                .thenComparing(ThongKeDiem::getTenNhom));
+        return ds;
+    }
+
     // ======================= 10. XUẤT BÁO CÁO =======================
 
-    /** Ghi toàn bộ các bảng thống kê ra file text UTF-8 (đổi tạm System.out sang file). */
+    /** Tạo nội dung trong bộ nhớ rồi ghi file text UTF-8 an toàn. */
     public boolean xuatBaoCao(String duongDan) {
-        Path p = Paths.get(duongDan);
         PrintStream manHinh = System.out;
+        ByteArrayOutputStream boDem = new ByteArrayOutputStream();
         try {
-            if (p.getParent() != null) {
-                Files.createDirectories(p.getParent());
-            }
-            try (PrintStream file = new PrintStream(new FileOutputStream(p.toFile()), true, StandardCharsets.UTF_8)) {
-                System.setOut(file);
+            try (PrintStream banIn = new PrintStream(boDem, true, StandardCharsets.UTF_8)) {
+                System.setOut(banIn);
                 System.out.println("BÁO CÁO THỐNG KÊ - QUẢN LÝ THI TRẮC NGHIỆM");
                 System.out.println("Thời điểm xuất: "
                         + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/uuuu HH:mm:ss")));
-                inTongQuan();
-                inPhoDiem();
-                inTheoDeThi();
-                inTheoMonHoc();
+                inTongQuan(); inPhoDiem(); inTheoDeThi(); inTheoMonHoc();
                 inXepHangThiSinh(Integer.MAX_VALUE);
-                inTheoLop();
-                inTheoThang();
-                inThongKeCauHoi();
+                inTheoLop(); inTheoThang(); inThongKeCauHoi();
+                if (banIn.checkError()) throw new IOException("Không tạo được nội dung báo cáo.");
             } finally {
                 System.setOut(manHinh);
             }
+            DanhSach.ghiVanBanAnToan(duongDan, boDem.toString(StandardCharsets.UTF_8));
             System.out.println("Đã xuất báo cáo thống kê ra file " + duongDan + ".");
             return true;
         } catch (IOException e) {
-            System.setOut(manHinh);
             System.out.println("Lỗi ghi file báo cáo " + duongDan + ": " + e.getMessage());
             return false;
         }

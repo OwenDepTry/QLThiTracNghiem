@@ -5,7 +5,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.format.DateTimeParseException;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.LinkOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,6 +27,9 @@ public abstract class DanhSach<T> implements IQuanLy<T>, IFileIO {
 
     protected ArrayList<T> danhSach;
     protected String duongDanFile;
+    private boolean coLoiDoc;
+
+    public boolean coLoiDoc() { return coLoiDoc; }
 
     public DanhSach() {
         this("");
@@ -70,36 +74,34 @@ public abstract class DanhSach<T> implements IQuanLy<T>, IFileIO {
     /** Thêm và ghi file ngay; trùng mã thì không thêm. */
     @Override
     public boolean them(T doiTuong) {
-        if (doiTuong == null || viTri(layMa(doiTuong)) >= 0) {
-            return false;
-        }
+        if (coLoiDoc || doiTuong == null || viTri(layMa(doiTuong)) >= 0) return false;
         danhSach.add(doiTuong);
-        luu();
-        return true;
+        if (luu()) return true;
+        danhSach.remove(danhSach.size() - 1);
+        return false;
     }
 
     /** Sửa và ghi file ngay; mã của đối tượng mới phải trùng mã cũ. */
     @Override
     public boolean sua(String ma, T doiTuongMoi) {
         int i = viTri(ma);
-        if (i < 0 || doiTuongMoi == null || !layMa(doiTuongMoi).equalsIgnoreCase(ma.trim())) {
-            return false;
-        }
-        danhSach.set(i, doiTuongMoi);
-        luu();
-        return true;
+        if (coLoiDoc || i < 0 || doiTuongMoi == null
+                || !layMa(doiTuongMoi).equalsIgnoreCase(ma.trim())) return false;
+        T cu = danhSach.set(i, doiTuongMoi);
+        if (luu()) return true;
+        danhSach.set(i, cu);
+        return false;
     }
 
     /** Xóa và ghi file ngay. */
     @Override
     public boolean xoa(String ma) {
         int i = viTri(ma);
-        if (i < 0) {
-            return false;
-        }
-        danhSach.remove(i);
-        luu();
-        return true;
+        if (coLoiDoc || i < 0) return false;
+        T cu = danhSach.remove(i);
+        if (luu()) return true;
+        danhSach.add(i, cu);
+        return false;
     }
 
     @Override
@@ -156,6 +158,7 @@ public abstract class DanhSach<T> implements IQuanLy<T>, IFileIO {
 
     @Override
     public int docFile(String duongDan) {
+        coLoiDoc = true; // Chỉ mở khóa sau khi đọc hết file mà không có lỗi.
         if (duongDan == null || duongDan.isBlank()) {
             System.out.println("Lỗi: chưa cấu hình đường dẫn file.");
             return 0;
@@ -164,59 +167,71 @@ public abstract class DanhSach<T> implements IQuanLy<T>, IFileIO {
         try {
             taoFileNeuChuaCo(p);
             List<String> cacDong = Files.readAllLines(p, StandardCharsets.UTF_8);
-            danhSach.clear();
+            ArrayList<T> moi = new ArrayList<>();
+            boolean loi = false;
             int soDong = 0;
             for (String dong : cacDong) {
                 soDong++;
-                String d = dong.replace("﻿", "").trim(); // bỏ BOM nếu file lưu bằng Notepad
-                if (d.isEmpty() || d.startsWith("#")) {
-                    continue;
-                }
+                String d = dong.replace("\uFEFF", "").trim();
+                if (d.isEmpty() || d.startsWith("#")) continue;
                 try {
-                    T dt = phanTichDong(d); // ĐA HÌNH: lớp con quyết định tạo đối tượng gì
+                    T dt = phanTichDong(d);
                     String ma = layMa(dt);
-                    if (ma == null || ma.isBlank()) {
-                        throw new IllegalArgumentException("mã trống");
+                    if (ma == null || ma.isBlank()) throw new IllegalArgumentException("mã trống");
+                    for (T cu : moi) {
+                        if (layMa(cu).equalsIgnoreCase(ma))
+                            throw new IllegalArgumentException("trùng mã " + ma);
                     }
-                    if (viTri(ma) >= 0) {
-                        throw new IllegalArgumentException("trùng mã " + ma);
-                    }
-                    danhSach.add(dt);
-                } catch (NumberFormatException e) {
-                    baoDongLoi(duongDan, soDong, "số không hợp lệ");
-                } catch (DateTimeParseException e) {
-                    baoDongLoi(duongDan, soDong, "ngày không hợp lệ");
+                    moi.add(dt);
                 } catch (RuntimeException e) {
+                    loi = true;
                     baoDongLoi(duongDan, soDong, e.getMessage());
                 }
             }
+            danhSach = moi;
+            coLoiDoc = loi;
+            if (loi) System.out.println("File có dòng lỗi: chỉ xem, sửa file gốc rồi đọc lại để mở khóa ghi.");
             return danhSach.size();
         } catch (IOException e) {
-            System.out.println("Lỗi đọc file " + duongDan + " (kiểm tra file có lưu dạng UTF-8 không): " + e.getMessage());
-            return 0;
+            System.out.println("Lỗi đọc file " + duongDan + ": " + e.getMessage());
+            return 0; // Giữ bộ nhớ cũ và khóa ghi.
         }
     }
 
     @Override
     public boolean ghiFile(String duongDan) {
+        if (coLoiDoc) {
+            System.out.println("Không ghi: file đã đọc có lỗi. Hãy sửa file gốc rồi đọc lại.");
+            return false;
+        }
         if (duongDan == null || duongDan.isBlank()) {
             System.out.println("Lỗi: chưa cấu hình đường dẫn file.");
             return false;
         }
-        Path p = Paths.get(duongDan);
         try {
-            if (p.getParent() != null) {
-                Files.createDirectories(p.getParent());
-            }
-            List<String> cacDong = new ArrayList<>();
-            for (T dt : danhSach) {
-                cacDong.add(chuyenThanhDong(dt)); // ĐA HÌNH: mỗi đối tượng tự biết cách ghi
-            }
-            Files.write(p, cacDong, StandardCharsets.UTF_8);
+            StringBuilder noiDung = new StringBuilder();
+            for (T dt : danhSach) noiDung.append(chuyenThanhDong(dt)).append('\n');
+            ghiVanBanAnToan(duongDan, noiDung.toString());
             return true;
         } catch (IOException e) {
             System.out.println("Lỗi ghi file " + duongDan + ": " + e.getMessage());
             return false;
+        }
+    }
+
+    /** Ghi xong file tạm mới thay file gốc. Dùng chung cho dữ liệu và báo cáo. */
+    public static void ghiVanBanAnToan(String duongDan, String noiDung) throws IOException {
+        Path dich = Paths.get(duongDan).toAbsolutePath();
+        if (Files.exists(dich, LinkOption.NOFOLLOW_LINKS)
+                && !Files.isRegularFile(dich, LinkOption.NOFOLLOW_LINKS))
+            throw new IOException("Đích ghi không phải file thông thường.");
+        Files.createDirectories(dich.getParent());
+        Path tam = Files.createTempFile(dich.getParent(), ".ghi-", ".tmp");
+        try {
+            Files.writeString(tam, noiDung, StandardCharsets.UTF_8);
+            Files.move(tam, dich, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            Files.deleteIfExists(tam);
         }
     }
 

@@ -58,3 +58,5 @@ GIAOVIEN|GV007|Võ Văn Phong|28/02/1978|phong.vo@gv.edu.vn|Toán rời rạc
 GIAOVIEN|GV008|Hoàng Thị Mai|11/11/1986|mai.hoang@gv.edu.vn|Công nghệ phần mềm
 GIAOVIEN|GV009|Đỗ Hữu Nghĩa|30/07/1984|nghia.do@gv.edu.vn|Trí tuệ nhân tạo
 GIAOVIEN|GV010|Ngô Thanh Tâm|19/05/1991|tam.ngo@gv.edu.vn|An toàn thông tin
+GIAOVIEN|GV011|Nguyễn Hải Đăng|10/07/2006|Dang.Nguyen@gv.edu.vn|An Bám
+GIAOVIEN|GV012|Phan Tiến Đạt|29/08/2006|Dat.Phan@gv.edu.vn|Cơ Sở Lập Trình

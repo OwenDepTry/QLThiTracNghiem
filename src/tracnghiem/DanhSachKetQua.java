@@ -31,7 +31,7 @@ public class DanhSachKetQua extends DanhSach<KetQuaThi> {
         double diem = Double.parseDouble(t[4]);
         int soCauDung = Integer.parseInt(t[5]);
         int tongSoCau = Integer.parseInt(t[6]);
-        if (diem < 0 || diem > 10) {
+        if (!Double.isFinite(diem) || diem < 0 || diem > 10) {
             throw new IllegalArgumentException("điểm phải từ 0 đến 10");
         }
         if (soCauDung < 0 || tongSoCau < 0 || soCauDung > tongSoCau) {

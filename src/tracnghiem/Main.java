@@ -14,6 +14,10 @@ public class Main {
         // In tiếng Việt UTF-8 ra console (Windows cần chạy "chcp 65001" trước)
         System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8));
         QuanLyThiTracNghiem chuongTrinh = new QuanLyThiTracNghiem();
-        chuongTrinh.chay();
+        try {
+            chuongTrinh.chay();
+        } catch (java.util.NoSuchElementException e) {
+            System.out.println("\nKhông còn dữ liệu nhập. Chương trình kết thúc.");
+        }
     }
 }
