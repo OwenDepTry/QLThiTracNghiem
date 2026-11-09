@@ -2,10 +2,12 @@ package tracnghiem;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Lớp điều khiển chương trình: menu chính và menu con cho từng thực thể.
@@ -58,7 +60,10 @@ public class QuanLyThiTracNghiem {
         System.out.printf("Đã đọc: %d môn học, %d người dùng, %d câu hỏi, %d đề thi, %d kết quả.%n",
                 soMon, soNguoi, soCau, soDe, soKetQua);
         kiemTraDuLieu();
-        if (!loiDuLieu.isEmpty()) {
+        if (coLoiDocFile()) {
+            System.out.println("CẢNH BÁO: có file đọc lỗi (xem các dòng \"bỏ qua\" ở trên). Chưa kiểm tra liên kết dữ liệu;"
+                    + " chương trình chỉ cho xem/tìm kiếm. Sửa file rồi chọn 8 -> 3 để đọc lại.");
+        } else if (!loiDuLieu.isEmpty()) {
             System.out.println("CẢNH BÁO: dữ liệu có " + loiDuLieu.size()
                     + " lỗi, chương trình chỉ cho xem/tìm kiếm cho tới khi sửa xong:");
             inLoiDuLieu(15);
@@ -75,8 +80,7 @@ public class QuanLyThiTracNghiem {
      */
     private void kiemTraDuLieu() {
         loiDuLieu.clear();
-        if (dsMonHoc.coLoiDoc() || dsNguoiDung.coLoiDoc() || dsCauHoi.coLoiDoc()
-                || dsDeThi.coLoiDoc() || dsKetQua.coLoiDoc()) {
+        if (coLoiDocFile()) {
             return; // đã có file đọc lỗi nên dữ liệu chưa đủ để kiểm tra liên kết
         }
         for (MonHoc mh : dsMonHoc.getTatCa()) {
@@ -86,6 +90,10 @@ public class QuanLyThiTracNghiem {
         for (NguoiDung nd : dsNguoiDung.getTatCa()) {
             kiemTraMa(DanhSachNguoiDung.TEN_FILE, nd.getMa());
             kiemTraBatBuoc(DanhSachNguoiDung.TEN_FILE, nd.getMa(), "họ tên", nd.getHoTen());
+            String loiNgaySinh = NhapLieu.loiNgay(nd.getNgaySinh());
+            if (loiNgaySinh != null) {
+                themLoi(DanhSachNguoiDung.TEN_FILE, nd.getMa() + " có ngày sinh không hợp lệ: " + loiNgaySinh);
+            }
             if (nd instanceof ThiSinh) {
                 kiemTraBatBuoc(DanhSachNguoiDung.TEN_FILE, nd.getMa(), "lớp", ((ThiSinh) nd).getLop());
             } else if (nd instanceof GiaoVien) {
@@ -120,8 +128,18 @@ public class QuanLyThiTracNghiem {
         }
         for (KetQuaThi kq : dsKetQua.getTatCa()) {
             kiemTraMa(DanhSachKetQua.TEN_FILE, kq.getMa());
-            if (!(dsNguoiDung.timTheoMa(kq.getMaThiSinh()) instanceof ThiSinh)) {
+            String loiNgayThi = NhapLieu.loiNgay(kq.getNgayThi());
+            if (loiNgayThi != null) {
+                themLoi(DanhSachKetQua.TEN_FILE, kq.getMa() + " có ngày thi không hợp lệ: " + loiNgayThi);
+            }
+            NguoiDung nguoiThi = dsNguoiDung.timTheoMa(kq.getMaThiSinh());
+            if (!(nguoiThi instanceof ThiSinh)) {
                 themLoi(DanhSachKetQua.TEN_FILE, kq.getMa() + " có thí sinh " + kq.getMaThiSinh() + " không tồn tại");
+            } else if (kq.getNgayThi() != null && nguoiThi.getNgaySinh() != null
+                    && kq.getNgayThi().isBefore(nguoiThi.getNgaySinh())) {
+                themLoi(DanhSachKetQua.TEN_FILE, kq.getMa() + " có ngày thi " + NhapLieu.dinhDangNgay(kq.getNgayThi())
+                        + " trước ngày sinh " + NhapLieu.dinhDangNgay(nguoiThi.getNgaySinh())
+                        + " của " + nguoiThi.getMa());
             }
             DeThi de = dsDeThi.timTheoMa(kq.getMaDeThi());
             if (de == null) {
@@ -133,10 +151,10 @@ public class QuanLyThiTracNghiem {
                         + de.getMa() + " có " + de.getSoCauHoi() + " câu");
                 continue;
             }
-            double[] khoang = khoangDiemHopLe(de, kq.getSoCauDung());
-            if (kq.getDiem() < khoang[0] || kq.getDiem() > khoang[1]) {
-                themLoi(DanhSachKetQua.TEN_FILE, kq.getMa() + " điểm " + kq.getDiem() + " không khớp "
-                        + kq.getSoCauDung() + "/" + kq.getTongSoCau() + " câu đúng (hợp lệ: " + moTaKhoang(khoang) + ")");
+            List<Double> cacMuc = cacMucDiemHopLe(de, kq.getSoCauDung());
+            if (timMucDiem(cacMuc, kq.getDiem()) == null) {
+                themLoi(DanhSachKetQua.TEN_FILE, kq.getMa() + " điểm " + kq.getDiem() + " không đạt được với "
+                        + kq.getSoCauDung() + "/" + kq.getTongSoCau() + " câu đúng (các mức: " + moTaCacMuc(cacMuc) + ")");
             }
         }
     }
@@ -166,70 +184,169 @@ public class QuanLyThiTracNghiem {
         }
     }
 
-    // ======================= KHOẢNG ĐIỂM HỢP LỆ CỦA MỘT KẾT QUẢ =======================
+    // ======================= CÁC MỨC ĐIỂM HỢP LỆ CỦA MỘT KẾT QUẢ =======================
 
     /**
-     * Khoảng điểm [thấp nhất, cao nhất] có thể đạt khi làm đúng hoàn toàn soCauDung câu của đề,
-     * theo đúng quy tắc chấm của BuoiThi: mỗi câu 10/n điểm, câu sai được 0 điểm,
-     * riêng câu nhiều đáp án chọn đúng nhưng thiếu được điểm từng phần (tối đa (m-1)/m số điểm của câu).
-     * - Thấp nhất: soCauDung câu đúng, các câu còn lại 0 điểm.
-     * - Cao nhất: các câu sai rơi vào những câu nhiều đáp án có điểm từng phần lớn nhất.
-     * Hai đầu được làm tròn ra ngoài 0,01 vì điểm lưu trong file đã làm tròn 2 chữ số.
+     * Tất cả các mức điểm THỰC SỰ đạt được khi làm đúng hoàn toàn đúng soCauDung câu của đề,
+     * theo đúng quy tắc chấm của BuoiThi:
+     * - mỗi câu 10/n điểm; câu đúng hoàn toàn được trọn điểm câu;
+     * - câu một đáp án / đúng-sai mà không đúng: 0 điểm;
+     * - câu nhiều đáp án có m đáp án đúng mà chưa đúng hoàn toàn: chỉ chọn j đáp án đúng
+     *   (0 <= j <= m-1, không chọn sai) được j/m điểm câu; chọn sai bất kỳ được 0 (trùng với j = 0).
+     * Duyệt lần lượt từng câu, cập nhật "đã có c câu đúng hoàn toàn -> các tổng điểm có thể có"
+     * (quy hoạch động). Tổng tính bằng số nguyên theo đơn vị 1/mauSo câu nên không bị sai số số thực.
+     * Trả về các mức điểm (chưa làm tròn), tăng dần, không trùng.
      */
-    private double[] khoangDiemHopLe(DeThi de, int soCauDung) {
+    private List<Double> cacMucDiemHopLe(DeThi de, int soCauDung) {
+        List<Double> ketQua = new ArrayList<>();
         int tongSoCau = de.getSoCauHoi();
-        if (tongSoCau == 0) {
-            return new double[] {0, 0};
+        if (tongSoCau == 0 || soCauDung < 0 || soCauDung > tongSoCau) {
+            return ketQua;
         }
-        double diemMoiCau = 10.0 / tongSoCau;
-        List<Double> diemTungPhan = new ArrayList<>();
-        for (String maCH : de.getDanhSachMaCauHoi()) {
-            CauHoi ch = dsCauHoi.timTheoMa(maCH);
+        // soDapAn[i] = số đáp án đúng nếu câu i là câu nhiều đáp án, 0 nếu là loại khác
+        int[] soDapAn = new int[tongSoCau];
+        int mauSo = 1; // bội chung nhỏ nhất của các soDapAn (mỗi câu tối đa 6 lựa chọn nên luôn nhỏ)
+        for (int i = 0; i < tongSoCau; i++) {
+            CauHoi ch = dsCauHoi.timTheoMa(de.getDanhSachMaCauHoi().get(i));
             if (ch instanceof CauHoiNhieuDapAn) { // ĐA HÌNH: chỉ loại này có điểm từng phần
-                int soDapAn = ((CauHoiNhieuDapAn) ch).getDapAnDung().length();
-                diemTungPhan.add(diemMoiCau * (soDapAn - 1) / soDapAn);
+                soDapAn[i] = ((CauHoiNhieuDapAn) ch).getDapAnDung().length();
+                mauSo = bcnn(mauSo, soDapAn[i]);
             }
         }
-        diemTungPhan.sort(Comparator.reverseOrder());
-        double thapNhat = soCauDung * diemMoiCau;
-        double caoNhat = thapNhat;
-        for (int i = 0; i < Math.min(tongSoCau - soCauDung, diemTungPhan.size()); i++) {
-            caoNhat += diemTungPhan.get(i);
+        // tongPhan.get(c) = các tổng (đơn vị 1/mauSo câu) đạt được khi đã có c câu đúng hoàn toàn
+        List<Set<Integer>> tongPhan = taoTapRong(soCauDung);
+        tongPhan.get(0).add(0);
+        for (int i = 0; i < tongSoCau; i++) {
+            List<Set<Integer>> moi = taoTapRong(soCauDung);
+            for (int c = 0; c <= soCauDung; c++) {
+                for (int s : tongPhan.get(c)) {
+                    // Câu i chưa đúng hoàn toàn: 0 điểm, hoặc j/m điểm câu nếu là câu nhiều đáp án
+                    moi.get(c).add(s);
+                    for (int j = 1; j < soDapAn[i]; j++) {
+                        moi.get(c).add(s + j * (mauSo / soDapAn[i]));
+                    }
+                    // Câu i đúng hoàn toàn: trọn điểm câu
+                    if (c < soCauDung) {
+                        moi.get(c + 1).add(s + mauSo);
+                    }
+                }
+            }
+            tongPhan = moi;
         }
-        caoNhat = Math.min(10.0, caoNhat);
-        return new double[] {Math.floor(thapNhat * 100 + 1e-9) / 100, Math.ceil(caoNhat * 100 - 1e-9) / 100};
+        for (int s : new TreeSet<>(tongPhan.get(soCauDung))) { // TreeSet: sắp xếp tăng dần
+            ketQua.add(Math.min(10.0, 10.0 * s / ((double) tongSoCau * mauSo)));
+        }
+        return ketQua;
     }
 
-    private static String moTaKhoang(double[] khoang) {
-        return khoang[1] - khoang[0] < 0.015
-                ? String.format("%.2f", khoang[0])
-                : String.format("%.2f - %.2f", khoang[0], khoang[1]);
+    private static List<Set<Integer>> taoTapRong(int soCauDung) {
+        List<Set<Integer>> ds = new ArrayList<>();
+        for (int c = 0; c <= soCauDung; c++) {
+            ds.add(new HashSet<>());
+        }
+        return ds;
+    }
+
+    /** Bội chung nhỏ nhất và ước chung lớn nhất (thuật toán Euclid). */
+    private static int bcnn(int a, int b) {
+        return a / ucln(a, b) * b;
+    }
+
+    private static int ucln(int a, int b) {
+        return b == 0 ? a : ucln(b, a % b);
     }
 
     /**
-     * Nhập điểm nằm trong khoảng hợp lệ. Nếu khoảng chỉ có một giá trị (đề không có câu nhiều đáp án)
-     * thì tự tính điểm, không cần nhập. macDinh != null: Enter để giữ điểm cũ nếu điểm cũ vẫn hợp lệ.
+     * Mức điểm khớp với diem (điểm lưu/nhập đã làm tròn 2 chữ số, nên lệch tối đa 0,005),
+     * hoặc null nếu diem không phải mức đạt được.
+     */
+    private static Double timMucDiem(List<Double> cacMuc, double diem) {
+        for (double muc : cacMuc) {
+            if (Math.abs(diem - muc) <= 0.005 + 1e-6) {
+                return muc;
+            }
+        }
+        return null;
+    }
+
+    private static String moTaCacMuc(List<Double> cacMuc) {
+        if (cacMuc.isEmpty()) {
+            return "không có";
+        }
+        if (cacMuc.size() > 12) {
+            return String.format("%d mức, từ %.2f đến %.2f", cacMuc.size(), cacMuc.get(0),
+                    cacMuc.get(cacMuc.size() - 1));
+        }
+        StringBuilder sb = new StringBuilder();
+        for (double muc : cacMuc) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(String.format("%.2f", muc));
+        }
+        return sb.toString();
+    }
+
+    /** Hai mức đạt được nằm sát dưới và sát trên diem, để gợi ý khi nhập sai. */
+    private static String goiYMucGanNhat(List<Double> cacMuc, double diem) {
+        Double duoi = null;
+        Double tren = null;
+        for (double muc : cacMuc) {
+            if (muc < diem) {
+                duoi = muc;
+            } else if (tren == null) {
+                tren = muc;
+            }
+        }
+        if (duoi == null) return String.format("%.2f", tren);
+        if (tren == null) return String.format("%.2f", duoi);
+        return String.format("%.2f hoặc %.2f", duoi, tren);
+    }
+
+    /**
+     * Nhập điểm phải là MỘT TRONG các mức đạt được với soCauDung câu đúng.
+     * Chỉ có một mức (đề không có câu nhiều đáp án, hoặc đúng hết) thì tự tính, không cần nhập.
+     * macDinh != null (đang sửa): Enter để giữ điểm cũ nếu điểm cũ vẫn hợp lệ.
+     * Giá trị trả về là mức điểm đã làm tròn 2 chữ số (gõ 0.714 -> lưu 0.71).
      */
     private double nhapDiemHopLe(DeThi de, int soCauDung, Double macDinh) {
-        double[] khoang = khoangDiemHopLe(de, soCauDung);
-        if (khoang[1] - khoang[0] < 0.015) {
-            double diem = NhapLieu.lamTron2(soCauDung * 10.0 / de.getSoCauHoi());
+        List<Double> cacMuc = cacMucDiemHopLe(de, soCauDung);
+        if (cacMuc.isEmpty()) {
+            throw new IllegalStateException("Không tính được điểm cho " + soCauDung + " câu đúng");
+        }
+        if (cacMuc.size() == 1) {
+            double diem = NhapLieu.lamTron2(cacMuc.get(0));
             System.out.printf("Điểm tự tính theo số câu đúng: %.2f%n", diem);
             return diem;
         }
-        System.out.println("(Câu nhiều đáp án được điểm từng phần nên điểm hợp lệ nằm trong khoảng "
-                + moTaKhoang(khoang) + ")");
-        String nhan = "Điểm (" + moTaKhoang(khoang) + ")";
-        if (macDinh != null && macDinh >= khoang[0] && macDinh <= khoang[1]) {
-            return NhapLieu.nhapSoThucTuyChon(nhan, khoang[0], khoang[1], macDinh);
-        }
-        if (macDinh != null) {
+        System.out.println("(Câu nhiều đáp án được điểm từng phần. Các mức điểm đạt được: "
+                + moTaCacMuc(cacMuc) + ")");
+        double thapNhat = NhapLieu.lamTron2(cacMuc.get(0));
+        double caoNhat = NhapLieu.lamTron2(cacMuc.get(cacMuc.size() - 1));
+        boolean giuDiemCu = macDinh != null && timMucDiem(cacMuc, macDinh) != null;
+        if (macDinh != null && !giuDiemCu) {
             System.out.println("Điểm cũ " + macDinh + " không còn khớp số câu đúng, hãy nhập lại.");
         }
-        return NhapLieu.nhapSoThuc(nhan, khoang[0], khoang[1]);
+        while (true) {
+            double diem = giuDiemCu
+                    ? NhapLieu.nhapSoThucTuyChon("Điểm", thapNhat, caoNhat, macDinh)
+                    : NhapLieu.nhapSoThuc("Điểm", thapNhat, caoNhat);
+            Double muc = timMucDiem(cacMuc, diem);
+            if (muc != null) {
+                return NhapLieu.lamTron2(muc);
+            }
+            System.out.println("Lỗi: " + diem + " không phải mức điểm đạt được với " + soCauDung
+                    + " câu đúng. Mức gần nhất: " + goiYMucGanNhat(cacMuc, diem) + ".");
+        }
     }
 
     public void luuTatCa() {
+        // Chặn TRƯỚC khi ghi bất kỳ file nào: ghi lúc dữ liệu đang lỗi sẽ xóa mất các dòng
+        // đã bị bỏ qua khi đọc, hoặc lưu đè dữ liệu sai lên file.
+        if (coFileLoi()) {
+            System.out.println("Không ghi: dữ liệu đang có lỗi (chế độ chỉ xem). Sửa file rồi chọn 8 -> 3 để đọc lại.");
+            return;
+        }
         boolean thanhCong = dsMonHoc.luu();
         thanhCong = dsNguoiDung.luu() && thanhCong;
         thanhCong = dsCauHoi.luu() && thanhCong;
@@ -320,6 +437,49 @@ public class QuanLyThiTracNghiem {
         danhSach.hienThiDanhSach(doiTuong == null ? List.of() : List.of(doiTuong));
     }
 
+    /**
+     * Nhập ngày thi: hợp lệ theo NhapLieu (1900..hôm nay) và không trước ngày sinh của thí sinh.
+     * macDinh != null: Enter để giữ ngày cũ (nếu ngày cũ vẫn hợp lệ).
+     */
+    private LocalDate nhapNgayThi(NguoiDung thiSinh, LocalDate macDinh) {
+        LocalDate ngaySinh = thiSinh == null ? null : thiSinh.getNgaySinh();
+        if (macDinh != null && ngaySinh != null && macDinh.isBefore(ngaySinh)) {
+            System.out.println("Ngày thi cũ trước ngày sinh của thí sinh, hãy nhập lại.");
+            macDinh = null; // ngày cũ không hợp lệ nên không cho Enter giữ lại
+        }
+        while (true) {
+            LocalDate ngay = macDinh == null
+                    ? NhapLieu.nhapNgay("Ngày thi")
+                    : NhapLieu.nhapNgayTuyChon("Ngày thi", macDinh);
+            if (ngaySinh == null || !ngay.isBefore(ngaySinh)) {
+                return ngay;
+            }
+            System.out.println("Lỗi: ngày thi không được trước ngày sinh " + NhapLieu.dinhDangNgay(ngaySinh)
+                    + " của " + thiSinh.getMa() + ".");
+        }
+    }
+
+    /**
+     * Nhập ngày sinh khi sửa người dùng: nếu đã có kết quả thi thì ngày sinh
+     * không được sau lần thi sớm nhất (đối chiếu toàn bộ lịch sử thi).
+     */
+    private LocalDate nhapNgaySinh(String maNguoiDung, LocalDate macDinh) {
+        LocalDate thiSomNhat = null;
+        for (KetQuaThi kq : dsKetQua.timTheoThiSinh(maNguoiDung)) {
+            if (kq.getNgayThi() != null && (thiSomNhat == null || kq.getNgayThi().isBefore(thiSomNhat))) {
+                thiSomNhat = kq.getNgayThi();
+            }
+        }
+        while (true) {
+            LocalDate ngay = NhapLieu.nhapNgayTuyChon("Ngày sinh", macDinh);
+            if (thiSomNhat == null || !ngay.isAfter(thiSomNhat)) {
+                return ngay;
+            }
+            System.out.println("Lỗi: " + maNguoiDung + " đã thi ngày " + NhapLieu.dinhDangNgay(thiSomNhat)
+                    + ", ngày sinh không được sau ngày đó.");
+        }
+    }
+
     private void thongBao(boolean thanhCong, String hanhDong, String ma) {
         if (thanhCong) {
             System.out.println("Đã " + hanhDong + " " + ma + " và ghi file thành công.");
@@ -330,8 +490,13 @@ public class QuanLyThiTracNghiem {
 
     /** Có file lỗi thì chỉ xem, tránh thay đổi dữ liệu dựa trên danh sách thiếu. */
     private boolean coFileLoi() {
+        return coLoiDocFile() || !loiDuLieu.isEmpty();
+    }
+
+    /** Có ít nhất một file đọc lỗi (dòng sai định dạng bị bỏ qua). */
+    private boolean coLoiDocFile() {
         return dsMonHoc.coLoiDoc() || dsNguoiDung.coLoiDoc() || dsCauHoi.coLoiDoc()
-                || dsDeThi.coLoiDoc() || dsKetQua.coLoiDoc() || !loiDuLieu.isEmpty();
+                || dsDeThi.coLoiDoc() || dsKetQua.coLoiDoc();
     }
 
     /** Chọn mã môn học đang tồn tại; macDinh != null thì Enter để giữ môn cũ. */
@@ -468,7 +633,7 @@ public class QuanLyThiTracNghiem {
         dsNguoiDung.hienThiDanhSach(List.of(cu));
         System.out.println(GOI_Y_GIU_NGUYEN);
         String hoTen = NhapLieu.nhapChuoiTuyChon("Họ tên", cu.getHoTen());
-        LocalDate ngaySinh = NhapLieu.nhapNgayTuyChon("Ngày sinh", cu.getNgaySinh());
+        LocalDate ngaySinh = nhapNgaySinh(cu.getMa(), cu.getNgaySinh());
         String email = NhapLieu.nhapEmailTuyChon("Email", cu.getEmail());
         NguoiDung moi;
         if (cu instanceof ThiSinh) {
@@ -894,7 +1059,7 @@ public class QuanLyThiTracNghiem {
         int tongSoCau = de.getSoCauHoi();
         int soCauDung = NhapLieu.nhapSoNguyen("Số câu đúng (0-" + tongSoCau + ")", 0, tongSoCau);
         double diem = nhapDiemHopLe(de, soCauDung, null); // điểm phải khớp số câu đúng
-        LocalDate ngayThi = NhapLieu.nhapNgay("Ngày thi");
+        LocalDate ngayThi = nhapNgayThi(ts, null); // ngày sinh <= ngày thi <= hôm nay
         thongBao(dsKetQua.them(new KetQuaThi(ma, ts.getMa(), de.getMa(), NhapLieu.lamTron2(diem),
                 soCauDung, tongSoCau, ngayThi)), "thêm kết quả", ma);
     }
@@ -916,7 +1081,8 @@ public class QuanLyThiTracNghiem {
         int soCauDung = NhapLieu.nhapSoNguyenTuyChon("Số câu đúng (0-" + cu.getTongSoCau() + ")",
                 0, cu.getTongSoCau(), cu.getSoCauDung());
         double diem = nhapDiemHopLe(de, soCauDung, cu.getDiem());
-        LocalDate ngayThi = NhapLieu.nhapNgayTuyChon("Ngày thi", cu.getNgayThi());
+        NguoiDung nguoiThi = dsNguoiDung.timTheoMa(cu.getMaThiSinh());
+        LocalDate ngayThi = nhapNgayThi(nguoiThi, cu.getNgayThi());
         KetQuaThi moi = new KetQuaThi(cu.getMa(), cu.getMaThiSinh(), cu.getMaDeThi(),
                 NhapLieu.lamTron2(diem), soCauDung, cu.getTongSoCau(), ngayThi);
         thongBao(dsKetQua.sua(cu.getMa(), moi), "sửa kết quả", cu.getMa());
@@ -972,7 +1138,10 @@ public class QuanLyThiTracNghiem {
                     inThongTinFile(dsCauHoi, "Câu hỏi");
                     inThongTinFile(dsDeThi, "Đề thi");
                     inThongTinFile(dsKetQua, "Kết quả thi");
-                    if (loiDuLieu.isEmpty()) {
+                    if (coLoiDocFile()) {
+                        System.out.println("  Chưa kiểm tra liên kết dữ liệu vì có file đọc lỗi."
+                                + " Sửa file rồi chọn 8 -> 3 để đọc lại.");
+                    } else if (loiDuLieu.isEmpty()) {
                         System.out.println("  Kiểm tra liên kết dữ liệu: không có lỗi.");
                     } else {
                         System.out.println("  Dữ liệu có " + loiDuLieu.size() + " lỗi:");

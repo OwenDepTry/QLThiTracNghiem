@@ -275,16 +275,32 @@ public class NhapLieu {
 
     // ================== NHẬP NGÀY ==================
 
-    /** Chuyển chuỗi dd/MM/yyyy thành ngày; ngày phải từ năm 1900 và không sau hôm nay. */
+    public static final int NAM_TOI_THIEU = 1900;
+
+    /**
+     * Quy tắc ngày dùng chung cho nhập từ bàn phím và đọc từ file:
+     * từ năm 1900 trở đi và không sau hôm nay. Trả về null nếu hợp lệ, ngược lại là mô tả lỗi.
+     */
+    public static String loiNgay(LocalDate ngay) {
+        if (ngay == null) {
+            return "thiếu ngày";
+        }
+        if (ngay.isAfter(LocalDate.now())) {
+            return "ngày " + dinhDangNgay(ngay) + " sau ngày hôm nay";
+        }
+        if (ngay.getYear() < NAM_TOI_THIEU) {
+            return "ngày " + dinhDangNgay(ngay) + " trước năm " + NAM_TOI_THIEU;
+        }
+        return null;
+    }
+
+    /** Chuyển chuỗi dd/MM/yyyy thành ngày; ngày phải thỏa loiNgay(). */
     private static LocalDate chuyenNgay(String s) {
         try {
             LocalDate ngay = LocalDate.parse(s, DINH_DANG_NGAY);
-            if (ngay.isAfter(LocalDate.now())) {
-                System.out.println("Lỗi: ngày không được sau ngày hôm nay.");
-                return null;
-            }
-            if (ngay.getYear() < 1900) {
-                System.out.println("Lỗi: năm phải từ 1900 trở đi.");
+            String loi = loiNgay(ngay);
+            if (loi != null) {
+                System.out.println("Lỗi: " + loi + ".");
                 return null;
             }
             return ngay;
@@ -318,7 +334,11 @@ public class NhapLieu {
         }
     }
 
-    /** Đọc ngày từ file (ném ngoại lệ nếu sai để lớp danh sách bỏ qua dòng lỗi). */
+    /**
+     * Đọc ngày từ file (ném ngoại lệ nếu sai định dạng để lớp danh sách bỏ qua dòng lỗi).
+     * Khoảng ngày (loiNgay) và quan hệ ngày sinh <= ngày thi được kiểm tra sau khi đọc,
+     * trong QuanLyThiTracNghiem.kiemTraDuLieu(), để báo lỗi rõ ràng thay vì bỏ mất bản ghi.
+     */
     public static LocalDate docNgay(String s) {
         return LocalDate.parse(s.trim(), DINH_DANG_NGAY);
     }
