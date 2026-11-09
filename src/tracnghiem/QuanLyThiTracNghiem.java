@@ -151,6 +151,11 @@ public class QuanLyThiTracNghiem {
                         + de.getMa() + " có " + de.getSoCauHoi() + " câu");
                 continue;
             }
+            if (!NhapLieu.laSoHaiChuSo(kq.getDiem())) {
+                themLoi(DanhSachKetQua.TEN_FILE, kq.getMa() + " điểm " + kq.getDiem()
+                        + " chưa làm tròn 2 chữ số thập phân (điểm hiển thị, tìm kiếm và xếp loại sẽ không khớp)");
+                continue;
+            }
             List<Double> cacMuc = cacMucDiemHopLe(de, kq.getSoCauDung());
             if (timMucDiem(cacMuc, kq.getDiem()) == null) {
                 themLoi(DanhSachKetQua.TEN_FILE, kq.getMa() + " điểm " + kq.getDiem() + " không đạt được với "
@@ -195,7 +200,7 @@ public class QuanLyThiTracNghiem {
      *   (0 <= j <= m-1, không chọn sai) được j/m điểm câu; chọn sai bất kỳ được 0 (trùng với j = 0).
      * Duyệt lần lượt từng câu, cập nhật "đã có c câu đúng hoàn toàn -> các tổng điểm có thể có"
      * (quy hoạch động). Tổng tính bằng số nguyên theo đơn vị 1/mauSo câu nên không bị sai số số thực.
-     * Trả về các mức điểm (chưa làm tròn), tăng dần, không trùng.
+     * Trả về các mức điểm ĐÃ làm tròn 2 chữ số, tăng dần, không trùng.
      */
     private List<Double> cacMucDiemHopLe(DeThi de, int soCauDung) {
         List<Double> ketQua = new ArrayList<>();
@@ -233,8 +238,17 @@ public class QuanLyThiTracNghiem {
             }
             tongPhan = moi;
         }
-        for (int s : new TreeSet<>(tongPhan.get(soCauDung))) { // TreeSet: sắp xếp tăng dần
-            ketQua.add(Math.min(10.0, 10.0 * s / ((double) tongSoCau * mauSo)));
+        // Đổi tổng s (đơn vị 1/mauSo câu) ra điểm, làm tròn 2 chữ số NỬA LÊN bằng số nguyên chính xác:
+        // điểm = 10*s/(n*mauSo)  =>  số phần trăm điểm = 1000*s/(n*mauSo), làm tròn nửa lên.
+        // Kết quả trùng với NhapLieu.lamTron2() mà BuoiThi dùng khi chấm.
+        long mau = (long) tongSoCau * mauSo;
+        TreeSet<Long> cacMucPhanTram = new TreeSet<>(); // TreeSet: tăng dần, không trùng
+        for (int s : tongPhan.get(soCauDung)) {
+            long phanTram = (2000L * s + mau) / (2 * mau);
+            cacMucPhanTram.add(Math.min(1000L, phanTram));
+        }
+        for (long phanTram : cacMucPhanTram) {
+            ketQua.add(phanTram / 100.0);
         }
         return ketQua;
     }
@@ -257,12 +271,17 @@ public class QuanLyThiTracNghiem {
     }
 
     /**
-     * Mức điểm khớp với diem (điểm lưu/nhập đã làm tròn 2 chữ số, nên lệch tối đa 0,005),
-     * hoặc null nếu diem không phải mức đạt được.
+     * Mức điểm BẰNG ĐÚNG diem, hoặc null. diem phải đã làm tròn 2 chữ số
+     * (4.999 hay 0.62 khi mức đúng là 0.63 đều không khớp). So sánh theo số phần trăm điểm
+     * (số nguyên) để tránh sai số số thực.
      */
     private static Double timMucDiem(List<Double> cacMuc, double diem) {
+        if (!NhapLieu.laSoHaiChuSo(diem)) {
+            return null;
+        }
+        long phanTram = Math.round(diem * 100.0);
         for (double muc : cacMuc) {
-            if (Math.abs(diem - muc) <= 0.005 + 1e-6) {
+            if (Math.round(muc * 100.0) == phanTram) {
                 return muc;
             }
         }
@@ -315,14 +334,14 @@ public class QuanLyThiTracNghiem {
             throw new IllegalStateException("Không tính được điểm cho " + soCauDung + " câu đúng");
         }
         if (cacMuc.size() == 1) {
-            double diem = NhapLieu.lamTron2(cacMuc.get(0));
+            double diem = cacMuc.get(0);
             System.out.printf("Điểm tự tính theo số câu đúng: %.2f%n", diem);
             return diem;
         }
         System.out.println("(Câu nhiều đáp án được điểm từng phần. Các mức điểm đạt được: "
                 + moTaCacMuc(cacMuc) + ")");
-        double thapNhat = NhapLieu.lamTron2(cacMuc.get(0));
-        double caoNhat = NhapLieu.lamTron2(cacMuc.get(cacMuc.size() - 1));
+        double thapNhat = cacMuc.get(0);
+        double caoNhat = cacMuc.get(cacMuc.size() - 1);
         boolean giuDiemCu = macDinh != null && timMucDiem(cacMuc, macDinh) != null;
         if (macDinh != null && !giuDiemCu) {
             System.out.println("Điểm cũ " + macDinh + " không còn khớp số câu đúng, hãy nhập lại.");
@@ -331,9 +350,9 @@ public class QuanLyThiTracNghiem {
             double diem = giuDiemCu
                     ? NhapLieu.nhapSoThucTuyChon("Điểm", thapNhat, caoNhat, macDinh)
                     : NhapLieu.nhapSoThuc("Điểm", thapNhat, caoNhat);
-            Double muc = timMucDiem(cacMuc, diem);
+            Double muc = timMucDiem(cacMuc, NhapLieu.lamTron2(diem)); // chuẩn hóa: gõ 0.714 -> 0.71
             if (muc != null) {
-                return NhapLieu.lamTron2(muc);
+                return muc;
             }
             System.out.println("Lỗi: " + diem + " không phải mức điểm đạt được với " + soCauDung
                     + " câu đúng. Mức gần nhất: " + goiYMucGanNhat(cacMuc, diem) + ".");

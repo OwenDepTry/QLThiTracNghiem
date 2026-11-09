@@ -429,8 +429,18 @@ public class NhapLieu {
         return String.format("%s%03d", tienTo, so);
     }
 
+    /**
+     * Làm tròn 2 chữ số thập phân (nửa lên). Quy tắc DUY NHẤT cho tính điểm, kiểm tra và đọc file.
+     * Cộng thêm 1e-7 để bù sai số số thực: ví dụ 6.375 khi cộng dồn có thể thành 6.374999999...,
+     * nếu không bù sẽ bị làm tròn thành 6.37 thay vì 6.38.
+     */
     public static double lamTron2(double so) {
-        return Math.round(so * 100.0) / 100.0;
+        return Math.round(so * 100.0 + 1e-7) / 100.0;
+    }
+
+    /** true nếu số có tối đa 2 chữ số thập phân (đã được làm tròn bằng lamTron2). */
+    public static boolean laSoHaiChuSo(double so) {
+        return Math.abs(so * 100.0 - Math.round(so * 100.0)) < 1e-6;
     }
 
     /** Rút gọn chuỗi dài khi in bảng. */
